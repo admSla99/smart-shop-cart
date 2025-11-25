@@ -12,6 +12,8 @@ create table if not exists public.shopping_lists (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   title text not null,
+  shop_name text,
+  shop_color text,
   created_at timestamptz not null default timezone('utc'::text, now())
 );
 
@@ -19,7 +21,7 @@ create table if not exists public.list_items (
   id uuid primary key default gen_random_uuid(),
   list_id uuid not null references public.shopping_lists (id) on delete cascade,
   name text not null,
-  quantity text,
+  quantity integer,
   notes text,
   is_checked boolean not null default false,
   created_at timestamptz not null default timezone('utc'::text, now())

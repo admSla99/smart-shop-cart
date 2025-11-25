@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -13,16 +14,28 @@ import {
 
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { ColorPicker } from '../components/ColorPicker';
 import { ListCard } from '../components/ListCard';
 import { useAuth } from '../contexts/AuthContext';
 import type { AppStackParamList } from '../navigation/AppNavigator';
 import { useShoppingStore } from '../store/useShoppingLists';
+import { palette, shopBrandColors, shopColors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Home'>;
+
+const CUSTOM_SHOP_OPTION = 'Custom shop';
+const SHOP_PRESETS = [
+  { label: 'Kaufland', color: shopBrandColors.kaufland },
+  { label: 'Lidl', color: shopBrandColors.lidl },
+  { label: 'Coop-jednota', color: shopBrandColors.coop },
+];
 
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { user, signOut } = useAuth();
   const [newListTitle, setNewListTitle] = useState('');
+  const [selectedShop, setSelectedShop] = useState<string>(SHOP_PRESETS[0]?.label ?? 'Kaufland');
+  const [customShopName, setCustomShopName] = useState('');
+  const [shopColor, setShopColor] = useState(SHOP_PRESETS[0]?.color ?? shopColors[0]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { lists, loadingLists, fetchLists, createList, deleteList, items } = useShoppingStore();
@@ -50,8 +63,19 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     setCreating(true);
     setError(null);
     try {
-      await createList(user.id, newListTitle);
+      const resolvedShopName =
+        selectedShop === CUSTOM_SHOP_OPTION ? customShopName.trim() : selectedShop;
+      const normalizedShopName = resolvedShopName?.trim() || undefined;
+      const normalizedShopColor = normalizedShopName ? shopColor : undefined;
+
+      await createList(user.id, newListTitle, {
+        shopName: normalizedShopName,
+        shopColor: normalizedShopColor,
+      });
       setNewListTitle('');
+      setCustomShopName('');
+      setSelectedShop(SHOP_PRESETS[0]?.label ?? 'Kaufland');
+      setShopColor(SHOP_PRESETS[0]?.color ?? shopColors[0]);
     } catch (err) {
       setError((err as Error)?.message ?? 'Unable to create list');
     } finally {
@@ -70,8 +94,17 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const renderList = ({ item }: { item: typeof lists[number] }) => (
     <ListCard
       title={item.title}
+      shopName={item.shop_name}
+      shopColor={item.shop_color ?? undefined}
       itemsCount={items[item.id]?.length ?? 0}
-      onPress={() => navigation.navigate('ListDetail', { listId: item.id, title: item.title })}
+      onPress={() =>
+        navigation.navigate('ListDetail', {
+          listId: item.id,
+          title: item.title,
+          shopName: item.shop_name,
+          shopColor: item.shop_color,
+        })
+      }
       onDelete={() => handleDeleteList(item.id)}
     />
   );
@@ -89,27 +122,81 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <View style={styles.newListCard}>
-        <Text style={styles.sectionTitle}>Create a new list</Text>
+        <Text style={styles.sectionTitle}>Plan your next run</Text>
+        <Text style={styles.sectionSubtitle}>Name the list, assign the store, and choose a color.</Text>
+        <Text style={styles.inputLabel}>List name</Text>
         <TextInput
           value={newListTitle}
           onChangeText={setNewListTitle}
-          placeholder="e.g. Weekly groceries"
-          placeholderTextColor="#9CA3AF"
+          placeholder="e.g. Friday dinner party"
+          placeholderTextColor={palette.muted}
           style={styles.input}
         />
+        <Text style={styles.inputLabel}>Shop (optional)</Text>
+        <View style={styles.shopOptionsRow}>
+          {SHOP_PRESETS.map((option) => {
+            const isSelected = selectedShop === option.label;
+            return (
+              <Pressable
+                key={option.label}
+                style={[styles.shopOption, isSelected && styles.shopOptionSelected]}
+                onPress={() => {
+                  setSelectedShop(option.label);
+                  setShopColor(option.color);
+                  setCustomShopName('');
+                }}
+              >
+                <View style={[styles.shopOptionSwatch, { backgroundColor: option.color }]} />
+                <Text style={styles.shopOptionLabel}>{option.label}</Text>
+              </Pressable>
+            );
+          })}
+          <Pressable
+            key={CUSTOM_SHOP_OPTION}
+            style={[
+              styles.shopOption,
+              selectedShop === CUSTOM_SHOP_OPTION && styles.shopOptionSelected,
+            ]}
+            onPress={() => setSelectedShop(CUSTOM_SHOP_OPTION)}
+          >
+            <View style={[styles.shopOptionSwatch, styles.customSwatch]} />
+            <Text style={styles.shopOptionLabel}>Custom</Text>
+          </Pressable>
+        </View>
+        {selectedShop === CUSTOM_SHOP_OPTION ? (
+          <TextInput
+            value={customShopName}
+            onChangeText={setCustomShopName}
+            placeholder="Type your shop name"
+            placeholderTextColor={palette.muted}
+            style={styles.input}
+          />
+        ) : null}
+        <Text style={styles.inputLabel}>Badge color</Text>
+        <ColorPicker colors={shopColors} selected={shopColor} onSelect={setShopColor} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button label="Save list" onPress={handleCreateList} loading={creating} />
       </View>
 
-      <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Your lists</Text>
-      {loadingLists ? (
-        <ActivityIndicator style={{ marginTop: 20 }} />
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Your lists</Text>
+        {loadingLists ? <ActivityIndicator color={palette.accent} /> : null}
+      </View>
+      {loadingLists && lists.length === 0 ? (
+        <ActivityIndicator style={{ marginTop: 20 }} color={palette.accent} />
       ) : (
         <FlatList
           data={lists}
           keyExtractor={(list) => list.id}
           renderItem={renderList}
-          refreshControl={<RefreshControl refreshing={loadingLists} onRefresh={loadLists} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={loadingLists}
+              onRefresh={loadLists}
+              tintColor={palette.text}
+              colors={[palette.primary]}
+            />
+          }
           contentContainerStyle={lists.length === 0 ? { flexGrow: 1 } : undefined}
           ListEmptyComponent={
             <EmptyState
@@ -127,7 +214,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    backgroundColor: '#F9FAFB',
+    paddingBottom: 16,
+    backgroundColor: palette.background,
   },
   header: {
     paddingTop: 12,
@@ -137,47 +225,98 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   greetingLabel: {
-    color: '#9CA3AF',
+    color: palette.muted,
     fontSize: 14,
   },
   greetingValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: palette.text,
   },
   signOut: {
-    color: '#DC2626',
+    color: palette.danger,
     fontWeight: '600',
   },
   newListCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    backgroundColor: palette.surface,
+    padding: 18,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: palette.text,
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    color: palette.muted,
+    marginBottom: 12,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
+    borderColor: palette.border,
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: palette.text,
     marginBottom: 12,
+    backgroundColor: palette.card,
   },
   error: {
-    color: '#DC2626',
+    color: palette.danger,
     marginBottom: 10,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: palette.muted,
+    marginBottom: 6,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  shopOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  shopOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.card,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  shopOptionSelected: {
+    borderColor: palette.primary,
+    backgroundColor: 'rgba(99,102,241,0.15)',
+  },
+  shopOptionSwatch: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  customSwatch: {
+    borderWidth: 1,
+    borderColor: palette.muted,
+    backgroundColor: 'transparent',
+  },
+  shopOptionLabel: {
+    color: palette.text,
+    fontWeight: '600',
   },
 });
 

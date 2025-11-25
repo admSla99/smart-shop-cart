@@ -17,11 +17,12 @@ import type { AppStackParamList } from '../navigation/AppNavigator';
 import { fetchAiSuggestions } from '../lib/ai';
 import type { AiSuggestion } from '../types';
 import { useShoppingStore } from '../store/useShoppingLists';
+import { getReadableTextColor, palette } from '../theme/colors';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ListDetail'>;
 
 const ListDetailScreen: React.FC<Props> = ({ route }) => {
-  const { listId, title } = route.params;
+  const { listId, title, shopName, shopColor } = route.params;
   const {
     items,
     loadingItems,
@@ -52,7 +53,12 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
     setSubmitting(true);
     setError(null);
     try {
-      await addItem(listId, { name, quantity });
+      const parsedQuantity = quantity.trim() ? parseInt(quantity.trim(), 10) : undefined;
+      if (quantity.trim() && (Number.isNaN(parsedQuantity) || parsedQuantity === undefined)) {
+        throw new Error('Quantity must be a whole number');
+      }
+
+      await addItem(listId, { name, quantity: parsedQuantity });
       setName('');
       setQuantity('');
     } catch (err) {
@@ -88,9 +94,10 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
 
   const applySuggestion = async (suggestion: AiSuggestion) => {
     try {
+      const parsedQuantity = suggestion.quantity ? parseInt(suggestion.quantity, 10) : undefined;
       await addItem(listId, {
         name: suggestion.name,
-        quantity: suggestion.quantity,
+        quantity: Number.isNaN(parsedQuantity) ? undefined : parsedQuantity,
       });
       setAiSuggestions((prev) => prev.filter((item) => item.name !== suggestion.name));
     } catch (err) {
@@ -107,21 +114,48 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+      {shopName ? (
+        <View
+          style={[
+            styles.infoBanner,
+            shopColor ? { backgroundColor: shopColor } : styles.defaultBanner,
+          ]}
+        >
+          <Text
+            style={[
+              styles.infoLabel,
+              shopColor ? { color: getReadableTextColor(shopColor) } : undefined,
+            ]}
+          >
+            Shop
+          </Text>
+          <Text
+            style={[
+              styles.infoValue,
+              shopColor ? { color: getReadableTextColor(shopColor) } : undefined,
+            ]}
+          >
+            {shopName}
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Add new item</Text>
         <TextInput
           placeholder="Item name"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={palette.muted}
           value={name}
           onChangeText={setName}
           style={styles.input}
         />
         <TextInput
-          placeholder="Quantity or size"
-          placeholderTextColor="#9CA3AF"
+          placeholder="Quantity (number)"
+          placeholderTextColor={palette.muted}
           value={quantity}
-          onChangeText={setQuantity}
+          onChangeText={(text) => setQuantity(text.replace(/[^0-9]/g, ''))}
           style={styles.input}
+          keyboardType="numeric"
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button label="Add item" onPress={handleAdd} loading={submitting} />
@@ -129,7 +163,7 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
 
       <Text style={styles.sectionTitle}>Items</Text>
       {loading ? (
-        <ActivityIndicator style={{ marginVertical: 20 }} />
+        <ActivityIndicator style={{ marginVertical: 20 }} color={palette.accent} />
       ) : (
         <FlatList
           data={listItems}
@@ -185,47 +219,47 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: palette.background,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: palette.surface,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: palette.text,
     marginBottom: 12,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
+    borderColor: palette.border,
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: palette.text,
     marginBottom: 12,
+    backgroundColor: palette.card,
   },
   error: {
-    color: '#DC2626',
+    color: palette.danger,
     marginBottom: 8,
   },
   aiCard: {
     marginTop: 20,
-    backgroundColor: '#EEF2FF',
-    borderRadius: 16,
+    backgroundColor: palette.card,
+    borderRadius: 18,
     padding: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   aiDescription: {
-    color: '#4C1D95',
+    color: palette.muted,
     marginBottom: 12,
   },
   suggestionRow: {
@@ -234,20 +268,40 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: '#C4B5FD',
+    borderColor: palette.border,
   },
   suggestionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#312E81',
+    color: palette.text,
   },
   suggestionMeta: {
-    color: '#4C1D95',
+    color: palette.muted,
     marginTop: 2,
   },
   suggestionReason: {
-    color: '#6D28D9',
+    color: palette.muted,
     marginTop: 2,
+  },
+  infoBanner: {
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+  },
+  defaultBanner: {
+    backgroundColor: 'rgba(52, 211, 153, 0.1)',
+  },
+  infoLabel: {
+    fontSize: 13,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    marginBottom: 4,
+    color: palette.text,
+  },
+  infoValue: {
+    color: palette.text,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

@@ -1,9 +1,11 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
+import { palette } from '../theme/colors';
+
 type ItemRowProps = {
   name: string;
-  quantity?: string | null;
+  quantity?: number | null;
   isChecked: boolean;
   onToggle: () => void;
   onDelete?: () => void;
@@ -14,7 +16,7 @@ const checkboxStyle = (checked: boolean): ViewStyle => ({
   height: 28,
   borderRadius: 8,
   borderWidth: 2,
-  borderColor: checked ? '#10B981' : '#D1D5DB',
+  borderColor: checked ? palette.success : palette.border,
   alignItems: 'center',
   justifyContent: 'center',
   marginRight: 12,
@@ -27,7 +29,9 @@ export const ItemRow: React.FC<ItemRowProps> = ({ name, quantity, isChecked, onT
     </Pressable>
     <View style={styles.textContainer}>
       <Text style={[styles.name, isChecked && styles.nameDone]}>{name}</Text>
-      {quantity ? <Text style={styles.quantity}>{quantity}</Text> : null}
+      {quantity !== null && quantity !== undefined ? (
+        <Text style={styles.quantity}>{quantity}</Text>
+      ) : null}
     </View>
     {onDelete ? (
       <Pressable onPress={onDelete} style={styles.delete}>
@@ -44,10 +48,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E5E7EB',
+    borderColor: palette.border,
   },
   checkmark: {
-    color: '#047857',
+    color: palette.success,
     fontWeight: '700',
   },
   textContainer: {
@@ -55,14 +59,14 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 16,
-    color: '#111827',
+    color: palette.text,
   },
   nameDone: {
     textDecorationLine: 'line-through',
-    color: '#6B7280',
+    color: palette.muted,
   },
   quantity: {
-    color: '#6B7280',
+    color: palette.muted,
     marginTop: 2,
   },
   delete: {
@@ -70,7 +74,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   deleteText: {
-    color: '#DC2626',
+    color: palette.danger,
     fontSize: 12,
     fontWeight: '600',
   },

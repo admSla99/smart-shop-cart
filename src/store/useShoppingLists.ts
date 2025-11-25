@@ -12,11 +12,15 @@ type ShoppingStore = {
   loadingItems: Record<string, boolean>;
   error: string | null;
   fetchLists: (userId: string) => Promise<void>;
-  createList: (userId: string, title: string) => Promise<ShoppingList | null>;
+  createList: (
+    userId: string,
+    title: string,
+    options?: { shopName?: string; shopColor?: string },
+  ) => Promise<ShoppingList | null>;
   deleteList: (listId: string) => Promise<void>;
   renameList: (listId: string, title: string) => Promise<void>;
   fetchItems: (listId: string) => Promise<void>;
-  addItem: (listId: string, payload: { name: string; quantity?: string }) => Promise<void>;
+  addItem: (listId: string, payload: { name: string; quantity?: number }) => Promise<void>;
   toggleItem: (listId: string, itemId: string, isChecked: boolean) => Promise<void>;
   deleteItem: (listId: string, itemId: string) => Promise<void>;
 };
@@ -43,15 +47,17 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
     });
   },
 
-  createList: async (userId: string, title: string) => {
+  createList: async (userId: string, title: string, options?: { shopName?: string; shopColor?: string }) => {
     const trimmed = title.trim();
     if (!trimmed) {
       throw new Error('Please provide a list name.');
     }
+    const normalizedShop = options?.shopName?.trim() || null;
+    const normalizedColor = options?.shopColor ?? null;
 
     const { data, error } = await supabase
       .from('shopping_lists')
-      .insert({ title: trimmed, user_id: userId })
+      .insert({ title: trimmed, user_id: userId, shop_name: normalizedShop, shop_color: normalizedColor })
       .select()
       .single();
 
