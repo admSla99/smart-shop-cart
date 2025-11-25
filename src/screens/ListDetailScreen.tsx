@@ -15,6 +15,9 @@ import { EmptyState } from '../components/EmptyState';
 import { ItemRow } from '../components/ItemRow';
 import type { AppStackParamList } from '../navigation/AppNavigator';
 import { fetchAiSuggestions } from '../lib/ai';
+import { sortByLayout } from '../lib/layoutSorting';
+import { useShopLayouts } from '../store/useShopLayouts';
+import { useAuth } from '../contexts/AuthContext';
 import type { AiSuggestion } from '../types';
 import { useShoppingStore } from '../store/useShoppingLists';
 import { getReadableTextColor, palette } from '../theme/colors';
@@ -23,6 +26,8 @@ type Props = NativeStackScreenProps<AppStackParamList, 'ListDetail'>;
 
 const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const { listId, title, shopName, shopColor } = route.params;
+  const { user } = useAuth();
+  const { fetchLayout } = useShopLayouts();
   const {
     items,
     loadingItems,
@@ -30,6 +35,7 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
     addItem,
     toggleItem,
     deleteItem,
+    applySortedOrder,
   } = useShoppingStore();
   const listItems = items[listId] ?? [];
   const [name, setName] = useState('');
@@ -37,6 +43,7 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const [submitting, setSubmitting] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
+  const [sorting, setSorting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loading = loadingItems[listId];
@@ -89,6 +96,39 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
       setError((err as Error)?.message ?? 'Unable to request AI suggestions');
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const ensureLayout = useCallback(async () => {
+    if (!user?.id) return [];
+    try {
+      const layout = await fetchLayout(user.id, shopName ?? 'Generic');
+      return layout;
+    } catch (err) {
+      setError((err as Error)?.message ?? 'Unable to load layout');
+      return [];
+    }
+  }, [fetchLayout, shopName, user?.id]);
+
+  const handleSortByLayout = async () => {
+    if (!user?.id) {
+      setError('You must be signed in to sort.');
+      return;
+    }
+    setSorting(true);
+    setError(null);
+    try {
+      const layout = await ensureLayout();
+      const sorted = await sortByLayout({
+        shopName: shopName ?? 'Generic',
+        items: listItems.map((item) => ({ id: item.id, name: item.name, quantity: item.quantity })),
+        layout,
+      });
+      await applySortedOrder(listId, sorted);
+    } catch (err) {
+      setError((err as Error)?.message ?? 'Unable to sort items');
+    } finally {
+      setSorting(false);
     }
   };
 
@@ -162,6 +202,16 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
       </View>
 
       <Text style={styles.sectionTitle}>Items</Text>
+      {listItems.length > 0 ? (
+        <View style={{ marginBottom: 12 }}>
+          <Button
+            label="Sort by shop layout"
+            onPress={handleSortByLayout}
+            loading={sorting}
+            variant="secondary"
+          />
+        </View>
+      ) : null}
       {loading ? (
         <ActivityIndicator style={{ marginVertical: 20 }} color={palette.accent} />
       ) : (
@@ -172,6 +222,7 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
             <ItemRow
               name={item.name}
               quantity={item.quantity}
+              areaName={item.area_name}
               isChecked={item.is_checked}
               onToggle={() => handleToggle(item.id, item.is_checked)}
               onDelete={() => handleDelete(item.id)}
