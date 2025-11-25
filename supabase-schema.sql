@@ -38,13 +38,23 @@ create table if not exists public.shop_layout_areas (
   created_at timestamptz not null default timezone('utc'::text, now())
 );
 
+create table if not exists public.shop_layout_templates (
+  id uuid primary key default gen_random_uuid(),
+  shop_name text not null,
+  area_name text not null,
+  sequence integer not null,
+  created_at timestamptz not null default timezone('utc'::text, now())
+);
+
 create index if not exists shop_layout_areas_user_shop_idx on public.shop_layout_areas (user_id, shop_name, sequence);
 create unique index if not exists shop_layout_areas_user_shop_area_idx on public.shop_layout_areas (user_id, shop_name, area_name);
+create index if not exists shop_layout_templates_shop_idx on public.shop_layout_templates (shop_name, sequence);
 
 alter table public.profiles enable row level security;
 alter table public.shopping_lists enable row level security;
 alter table public.list_items enable row level security;
 alter table public.shop_layout_areas enable row level security;
+alter table public.shop_layout_templates enable row level security;
 
 create policy "Users can select their profile"
 on public.profiles
@@ -81,3 +91,8 @@ on public.shop_layout_areas
 for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+
+create policy "Templates readable by everyone"
+on public.shop_layout_templates
+for select
+using (true);

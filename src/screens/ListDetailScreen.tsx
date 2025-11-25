@@ -17,7 +17,7 @@ import type { AppStackParamList } from '../navigation/AppNavigator';
 import { sortByLayout } from '../lib/layoutSorting';
 import { useShopLayouts } from '../store/useShopLayouts';
 import { useAuth } from '../contexts/AuthContext';
-import type { ShopLayoutArea } from '../types';
+import type { ShopLayoutArea, ShopLayoutTemplate } from '../types';
 import { useShoppingStore } from '../store/useShoppingLists';
 import { getReadableTextColor, palette } from '../theme/colors';
 
@@ -43,6 +43,7 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const [sorting, setSorting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [layoutAreas, setLayoutAreas] = useState<ShopLayoutArea[]>([]);
+  const [templates, setTemplates] = useState<ShopLayoutTemplate[]>([]);
   const [layoutLoading, setLayoutLoading] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
@@ -72,11 +73,22 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
     }
   }, [fetchLayout, shopName, user?.id]);
 
+  const loadTemplates = useCallback(async () => {
+    if (!shopName) return;
+    try {
+      const data = await useShopLayouts.getState().fetchTemplates(shopName);
+      setTemplates(data);
+    } catch (err) {
+      setLayoutError((err as Error)?.message ?? 'Unable to load templates');
+    }
+  }, [shopName]);
+
   useEffect(() => {
     if (layoutEditorOpen) {
       loadLayout();
+      loadTemplates();
     }
-  }, [layoutEditorOpen, loadLayout]);
+  }, [layoutEditorOpen, loadLayout, loadTemplates]);
 
   const handleAdd = async () => {
     setSubmitting(true);
@@ -240,6 +252,27 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
                 <ActivityIndicator style={{ marginVertical: 12 }} color={palette.accent} />
               ) : null}
               {layoutError ? <Text style={styles.error}>{layoutError}</Text> : null}
+              {templates.length > 0 ? (
+                <View style={styles.templateRow}>
+                  <Text style={styles.sectionSubtitle}>Templates available for this shop</Text>
+                  <Button
+                    label="Use template"
+                    variant="secondary"
+                    onPress={() => {
+                      if (!user?.id) return;
+                      setLayoutAreas(
+                        templates.map((t, idx) => ({
+                          id: `${t.id}-${idx}`,
+                          user_id: user.id,
+                          shop_name: shopName ?? 'Generic',
+                          area_name: t.area_name,
+                          sequence: idx + 1,
+                        })),
+                      );
+                    }}
+                  />
+                </View>
+              ) : null}
               {layoutAreas.map((area, index) => (
                 <View key={`${area.id}-${index}`} style={styles.areaRow}>
                   <Text style={styles.areaName}>
@@ -413,6 +446,10 @@ const styles = StyleSheet.create({
   },
   newAreaRow: {
     marginTop: 12,
+  },
+  templateRow: {
+    marginTop: 10,
+    marginBottom: 10,
   },
   infoBanner: {
     borderRadius: 14,

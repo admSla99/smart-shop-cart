@@ -2,13 +2,15 @@ import { create } from 'zustand';
 
 import { supabase } from '../lib/supabase';
 import { DEFAULT_LAYOUTS, resolveDefaultLayout } from '../lib/layoutSorting';
-import type { ShopLayoutArea } from '../types';
+import type { ShopLayoutArea, ShopLayoutTemplate } from '../types';
 
 type LayoutStore = {
   layouts: Record<string, ShopLayoutArea[]>;
+  templates: Record<string, ShopLayoutTemplate[]>;
   loading: boolean;
   error: string | null;
   fetchLayout: (userId: string, shopName: string) => Promise<ShopLayoutArea[]>;
+  fetchTemplates: (shopName: string) => Promise<ShopLayoutTemplate[]>;
   saveLayout: (userId: string, shopName: string, areas: string[]) => Promise<ShopLayoutArea[]>;
 };
 
@@ -23,6 +25,7 @@ const toAreaRecords = (userId: string, shopName: string, names: string[]): ShopL
 
 export const useShopLayouts = create<LayoutStore>((set, get) => ({
   layouts: {},
+  templates: {},
   loading: false,
   error: null,
 
@@ -103,6 +106,32 @@ export const useShopLayouts = create<LayoutStore>((set, get) => ({
     }));
 
     return data ?? records;
+  },
+
+  fetchTemplates: async (shopName) => {
+    const cacheKey = `template:${shopName.toLowerCase()}`;
+    const cached = get().templates[cacheKey];
+    if (cached?.length) return cached;
+
+    set({ loading: true, error: null });
+
+    const { data, error } = await supabase
+      .from('shop_layout_templates')
+      .select('*')
+      .ilike('shop_name', shopName)
+      .order('sequence', { ascending: true });
+
+    if (error) {
+      set({ loading: false, error: error.message });
+      throw error;
+    }
+
+    set((state) => ({
+      loading: false,
+      templates: { ...state.templates, [cacheKey]: data ?? [] },
+    }));
+
+    return data ?? [];
   },
 }));
 

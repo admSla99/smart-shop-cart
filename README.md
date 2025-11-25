@@ -48,6 +48,7 @@ Minimal shopping list mobile app powered by Expo / React Native with Supabase au
    - `shopping_lists` holds list names + optional `shop_name` + `shop_color` (owned by `user_id`).
    - `list_items` links each item to a list with cascade deletes and now stores optional `area_name` + `order_index` for layout-aware sorting.
    - `shop_layout_areas` stores per-user, per-shop ordered area names (e.g., Produce → Bakery → Checkout).
+   - `shop_layout_templates` stores shared templates per shop name; readable by everyone so users can import a baseline layout.
 3. Under Authentication → Providers, ensure Email auth is enabled.
 4. Grab the project URL and anon public key from Project Settings → API and place them in `.env`.
 
