@@ -1,5 +1,10 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 type SortRequest = {
   shopName?: string;
   items?: { id: string; name: string; quantity?: number | string | null }[];
@@ -119,8 +124,12 @@ const callOpenRouter = async (prompt: string) => {
 };
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   }
 
   let body: SortRequest;
@@ -129,7 +138,7 @@ serve(async (req) => {
   } catch (_err) {
     return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
 
@@ -137,7 +146,7 @@ serve(async (req) => {
   if (!items.length) {
     return new Response(JSON.stringify({ sorted: [] }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
 
@@ -151,7 +160,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ sorted: cleaned, areas: areaNames }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (err) {
     console.error('sort-by-layout error', err);
@@ -162,7 +171,7 @@ serve(async (req) => {
         areas: areaNames,
         sorted: sanitize(items, areaNames, []),
       }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
     );
   }
 });
