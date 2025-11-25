@@ -8,6 +8,7 @@ Minimal shopping list mobile app powered by Expo / React Native with Supabase au
 - Add, check, uncheck, and remove items from each list with optimistic UI.
 - Lists capture an optional shop name plus badge color so you know where each run is intended.
 - Mock AI assistant that can be swapped for a real endpoint when credentials are provided.
+- Layout-aware sorting scaffold for sending list items + shop layout areas to an LLM and returning an ordered route.
 - Typed Supabase client with AsyncStorage persistence so sessions survive restarts.
 - Opinionated dark theme UI for a professional, minimal look.
 
@@ -46,7 +47,8 @@ Minimal shopping list mobile app powered by Expo / React Native with Supabase au
 2. Run the SQL in [`supabase-schema.sql`](supabase-schema.sql) via the SQL editor to create tables and RLS policies:
    - `profiles` stores metadata synced after sign up.
    - `shopping_lists` holds list names + optional `shop_name` + `shop_color` (owned by `user_id`).
-   - `list_items` links each item to a list with cascade deletes.
+   - `list_items` links each item to a list with cascade deletes and now stores optional `area_name` + `order_index` for layout-aware sorting.
+   - `shop_layout_areas` stores per-user, per-shop ordered area names (e.g., Produce → Bakery → Checkout).
 3. Under Authentication → Providers, ensure Email auth is enabled.
 4. Grab the project URL and anon public key from Project Settings → API and place them in `.env`.
 
@@ -54,6 +56,12 @@ Minimal shopping list mobile app powered by Expo / React Native with Supabase au
 - `src/lib/ai.ts` centralizes the AI client. When `EXPO_PUBLIC_AI_SERVICE_URL` and `EXPO_PUBLIC_AI_API_KEY` are provided the app will `POST` `{ listTitle, items }` to that endpoint; otherwise it returns mock suggestions so UI flows remain testable.
 - `ListDetailScreen` surfaces the AI CTA and renders responses, so swapping to a production model only requires changing the fetch logic.
 - Future enhancements: log AI suggestions back to Supabase, allow multi-select suggestions, or schedule background reminders based on model output.
+
+### AI layout-aware sorting (new branch)
+- Data model: `shop_layout_areas` table stores ordered areas per user + shop; `list_items` has `area_name` and `order_index` columns to persist sorted results.
+- Edge function: `supabase/functions/sort-by-layout` accepts `{ shopName, items, layout }`, calls OpenRouter (default model `gpt-4o-mini`) to map items to areas and returns a sorted list. Configure `OPENROUTER_API_KEY` (and optional `OPENROUTER_MODEL`) in the function environment before deploying.
+- Client helpers: `src/lib/layoutSorting.ts` wraps the function call; `src/store/useShopLayouts.ts` seeds default layouts for Kaufland/Lidl/Coop and saves per-user overrides; `useShoppingStore.applySortedOrder` updates `list_items` with returned area/order.
+- Usage sketch: fetch layout for the selected shop, call `sortByLayout` with current items, then pass results to `applySortedOrder` to persist and re-render.
 
 ### Project structure
 ```
