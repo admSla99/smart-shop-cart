@@ -27,10 +27,3 @@ export type ShopLayoutArea = {
   sequence: number;
   created_at?: string;
 };
-
-export type AiSuggestion = {
-  name: string;
-  quantity?: string;
-  notes?: string;
-  reason?: string;
-};

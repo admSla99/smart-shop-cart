@@ -7,7 +7,6 @@ Minimal shopping list mobile app powered by Expo / React Native with Supabase au
 - Create, rename, and delete shopping lists scoped per account.
 - Add, check, uncheck, and remove items from each list with optimistic UI.
 - Lists capture an optional shop name plus badge color so you know where each run is intended.
-- Mock AI assistant that can be swapped for a real endpoint when credentials are provided.
 - Layout-aware sorting scaffold for sending list items + shop layout areas to an LLM and returning an ordered route.
 - Typed Supabase client with AsyncStorage persistence so sessions survive restarts.
 - Opinionated dark theme UI for a professional, minimal look.
@@ -51,11 +50,6 @@ Minimal shopping list mobile app powered by Expo / React Native with Supabase au
    - `shop_layout_areas` stores per-user, per-shop ordered area names (e.g., Produce → Bakery → Checkout).
 3. Under Authentication → Providers, ensure Email auth is enabled.
 4. Grab the project URL and anon public key from Project Settings → API and place them in `.env`.
-
-### AI integration plan
-- `src/lib/ai.ts` centralizes the AI client. When `EXPO_PUBLIC_AI_SERVICE_URL` and `EXPO_PUBLIC_AI_API_KEY` are provided the app will `POST` `{ listTitle, items }` to that endpoint; otherwise it returns mock suggestions so UI flows remain testable.
-- `ListDetailScreen` surfaces the AI CTA and renders responses, so swapping to a production model only requires changing the fetch logic.
-- Future enhancements: log AI suggestions back to Supabase, allow multi-select suggestions, or schedule background reminders based on model output.
 
 ### AI layout-aware sorting (new branch)
 - Data model: `shop_layout_areas` table stores ordered areas per user + shop; `list_items` has `area_name` and `order_index` columns to persist sorted results.

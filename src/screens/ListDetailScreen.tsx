@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,11 +14,10 @@ import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { ItemRow } from '../components/ItemRow';
 import type { AppStackParamList } from '../navigation/AppNavigator';
-import { fetchAiSuggestions } from '../lib/ai';
 import { sortByLayout } from '../lib/layoutSorting';
 import { useShopLayouts } from '../store/useShopLayouts';
 import { useAuth } from '../contexts/AuthContext';
-import type { AiSuggestion, ShopLayoutArea } from '../types';
+import type { ShopLayoutArea } from '../types';
 import { useShoppingStore } from '../store/useShoppingLists';
 import { getReadableTextColor, palette } from '../theme/colors';
 
@@ -41,8 +40,6 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
   const [sorting, setSorting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [layoutAreas, setLayoutAreas] = useState<ShopLayoutArea[]>([]);
@@ -108,22 +105,6 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
     deleteItem(listId, itemId).catch((err) => setError(err.message));
   };
 
-  const handleAiSuggestions = async () => {
-    setAiLoading(true);
-    setError(null);
-    try {
-      const suggestions = await fetchAiSuggestions(
-        title,
-        listItems.map((item) => item.name),
-      );
-      setAiSuggestions(suggestions);
-    } catch (err) {
-      setError((err as Error)?.message ?? 'Unable to request AI suggestions');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const ensureLayout = useCallback(async () => {
     if (!user?.id) return [];
     try {
@@ -156,26 +137,6 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
       setSorting(false);
     }
   };
-
-  const applySuggestion = async (suggestion: AiSuggestion) => {
-    try {
-      const parsedQuantity = suggestion.quantity ? parseInt(suggestion.quantity, 10) : undefined;
-      await addItem(listId, {
-        name: suggestion.name,
-        quantity: Number.isNaN(parsedQuantity) ? undefined : parsedQuantity,
-      });
-      setAiSuggestions((prev) => prev.filter((item) => item.name !== suggestion.name));
-    } catch (err) {
-      setError((err as Error)?.message ?? 'Unable to add suggestion');
-    }
-  };
-
-  const aiDescription = useMemo(() => {
-    if (!aiSuggestions.length) {
-      return 'Let AI analyze your current items and suggest what you might be missing.';
-    }
-    return 'Tap to add any of these smart recommendations to your list.';
-  }, [aiSuggestions]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -257,36 +218,11 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
           ListEmptyComponent={
             <EmptyState
               title="No items yet"
-              description="Add your first item or ask AI to help with suggestions."
+              description="Add your first item to get started."
             />
           }
         />
       )}
-
-      <View style={styles.aiCard}>
-        <Text style={styles.sectionTitle}>AI shopping assistant</Text>
-        <Text style={styles.aiDescription}>{aiDescription}</Text>
-        <Button
-          label={aiSuggestions.length ? 'Refresh suggestions' : 'Generate suggestions'}
-          variant="secondary"
-          onPress={handleAiSuggestions}
-          loading={aiLoading}
-        />
-        {aiSuggestions.map((suggestion) => (
-          <View key={suggestion.name} style={styles.suggestionRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.suggestionTitle}>{suggestion.name}</Text>
-              {suggestion.quantity ? (
-                <Text style={styles.suggestionMeta}>{suggestion.quantity}</Text>
-              ) : null}
-              {suggestion.reason ? (
-                <Text style={styles.suggestionReason}>{suggestion.reason}</Text>
-              ) : null}
-            </View>
-            <Button label="Add" onPress={() => applySuggestion(suggestion)} variant="ghost" />
-          </View>
-        ))}
-      </View>
 
       {shopName ? (
         <View style={styles.layoutCard}>
@@ -444,39 +380,6 @@ const styles = StyleSheet.create({
   error: {
     color: palette.danger,
     marginBottom: 8,
-  },
-  aiCard: {
-    marginTop: 20,
-    backgroundColor: palette.card,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  aiDescription: {
-    color: palette.muted,
-    marginBottom: 12,
-  },
-  suggestionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: palette.border,
-  },
-  suggestionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: palette.text,
-  },
-  suggestionMeta: {
-    color: palette.muted,
-    marginTop: 2,
-  },
-  suggestionReason: {
-    color: palette.muted,
-    marginTop: 2,
   },
   layoutCard: {
     backgroundColor: palette.surface,
