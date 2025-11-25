@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { palette } from '../theme/colors';
+
 type EmptyStateProps = {
   title: string;
   description?: string;
@@ -22,12 +24,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: palette.text,
     textAlign: 'center',
   },
   description: {
     fontSize: 14,
-    color: '#6B7280',
+    color: palette.muted,
     textAlign: 'center',
     marginTop: 6,
   },

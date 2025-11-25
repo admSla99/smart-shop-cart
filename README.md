@@ -6,13 +6,16 @@ Minimal shopping list mobile app powered by Expo / React Native with Supabase au
 - Email/password authentication backed by Supabase auth + profiles table.
 - Create, rename, and delete shopping lists scoped per account.
 - Add, check, uncheck, and remove items from each list with optimistic UI.
+- Lists capture an optional shop name plus badge color so you know where each run is intended.
 - Mock AI assistant that can be swapped for a real endpoint when credentials are provided.
 - Typed Supabase client with AsyncStorage persistence so sessions survive restarts.
+- Opinionated dark theme UI for a professional, minimal look.
 
 ### Quick summary
 - Expo + React Native frontend with navigation, auth flow, and shopping list CRUD screens.
 - Supabase schema & RLS defined in [`supabase-schema.sql`](supabase-schema.sql) so new projects can apply it quickly.
 - AI hook (`src/lib/ai.ts`) already handles switching between mock data and a real endpoint based on `.env` keys.
+- Dark UI with configurable per-store badge colors for quick visual scanning.
 
 ### Getting Started
 1. **Install tooling**
@@ -42,7 +45,7 @@ Minimal shopping list mobile app powered by Expo / React Native with Supabase au
 1. Create a new project in the Supabase dashboard.
 2. Run the SQL in [`supabase-schema.sql`](supabase-schema.sql) via the SQL editor to create tables and RLS policies:
    - `profiles` stores metadata synced after sign up.
-   - `shopping_lists` holds list names (owned by `user_id`).
+   - `shopping_lists` holds list names + optional `shop_name` + `shop_color` (owned by `user_id`).
    - `list_items` links each item to a list with cascade deletes.
 3. Under Authentication → Providers, ensure Email auth is enabled.
 4. Grab the project URL and anon public key from Project Settings → API and place them in `.env`.

@@ -4,14 +4,16 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/Button';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
+import { palette } from '../theme/colors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'AuthLanding'>;
 
 const AuthLandingScreen: React.FC<Props> = ({ navigation }) => (
   <View style={styles.container}>
-    <Text style={styles.title}>Smart Shopping List</Text>
+    <Text style={styles.badge}>Smart Shopping</Text>
+    <Text style={styles.title}>Groceries, organized. AI ready.</Text>
     <Text style={styles.subtitle}>
-      Collect your essentials, sync across devices, and let AI recommend what you might need next.
+      Sign in to keep your shopping trips synced, categorized by store, and powered by intelligent suggestions.
     </Text>
 
     <Button label="Sign in" onPress={() => navigation.navigate('SignIn')} />
@@ -26,20 +28,27 @@ const AuthLandingScreen: React.FC<Props> = ({ navigation }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
+    padding: 28,
     justifyContent: 'center',
-    backgroundColor: '#F5F5F4',
+    backgroundColor: palette.background,
+  },
+  badge: {
+    color: palette.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '700',
+    marginBottom: 12,
   },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '700',
-    color: '#111827',
+    color: palette.text,
     marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
-    color: '#4B5563',
-    marginBottom: 40,
+    color: palette.muted,
+    marginBottom: 32,
   },
 });
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
+import { palette } from '../theme/colors';
+
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
 type ButtonProps = {
@@ -31,8 +33,18 @@ export const Button: React.FC<ButtonProps> = ({
       onPress={onPress}
       disabled={isDisabled}
     >
-      {loading ? <ActivityIndicator color={variant === 'ghost' ? '#111' : '#fff'} /> : (
-        <Text style={[styles.label, variant !== 'primary' && styles.altLabel]}>{label}</Text>
+      {loading ? (
+        <ActivityIndicator color={variant === 'secondary' ? palette.text : palette.text} />
+      ) : (
+        <Text
+          style={[
+            styles.label,
+            variant === 'secondary' && styles.secondaryLabel,
+            variant === 'ghost' && styles.ghostLabel,
+          ]}
+        >
+          {label}
+        </Text>
       )}
     </Pressable>
   );
@@ -40,23 +52,23 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 6,
   },
   primary: {
-    backgroundColor: '#111827',
+    backgroundColor: palette.primary,
   },
   secondary: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: palette.elevated,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   ghost: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
   },
   pressed: {
     opacity: 0.85,
@@ -65,12 +77,15 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   label: {
-    color: '#fff',
+    color: palette.text,
     fontWeight: '600',
     fontSize: 16,
   },
-  altLabel: {
-    color: '#111827',
+  secondaryLabel: {
+    color: palette.text,
+  },
+  ghostLabel: {
+    color: palette.muted,
   },
 });
 

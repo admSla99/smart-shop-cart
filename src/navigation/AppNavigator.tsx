@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
@@ -10,6 +10,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ListDetailScreen from '../screens/ListDetailScreen';
 import SignInScreen from '../screens/SignInScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import { palette } from '../theme/colors';
 
 export type AuthStackParamList = {
   AuthLanding: undefined;
@@ -19,7 +20,7 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Home: undefined;
-  ListDetail: { listId: string; title: string };
+  ListDetail: { listId: string; title: string; shopName?: string | null; shopColor?: string | null };
 };
 
 export type AppScreenProps<T extends keyof AppStackParamList> = NativeStackScreenProps<
@@ -29,6 +30,18 @@ export type AppScreenProps<T extends keyof AppStackParamList> = NativeStackScree
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<AppStackParamList>();
+
+const navTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: palette.background,
+    card: palette.surface,
+    border: palette.border,
+    text: palette.text,
+    primary: palette.primary,
+  },
+};
 
 const AuthFlow = () => (
   <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -57,7 +70,7 @@ export const AppNavigator = () => {
   const { loading, user } = useAuth();
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       {loading ? <LoadingOverlay message="Preparing your workspace..." /> : user ? <AppFlow /> : <AuthFlow />}
     </NavigationContainer>
   );

@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
 import { useAuth } from '../contexts/AuthContext';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
+import { palette } from '../theme/colors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 
@@ -36,11 +37,8 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
     >
       <View style={styles.card}>
         <Text style={styles.title}>Create your account</Text>
-        <TextField
-          label="Display name"
-          value={displayName}
-          onChangeText={setDisplayName}
-        />
+        <Text style={styles.subtitle}>Track multiple store-specific lists with AI assistance.</Text>
+        <TextField label="Display name" value={displayName} onChangeText={setDisplayName} />
         <TextField
           label="Email"
           keyboardType="email-address"
@@ -49,19 +47,10 @@ const SignUpScreen: React.FC<Props> = ({ navigation }) => {
           value={email}
           onChangeText={setEmail}
         />
-        <TextField
-          label="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <TextField label="Password" secureTextEntry value={password} onChangeText={setPassword} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button label="Create account" onPress={handleSubmit} loading={submitting} />
-        <Button
-          label="Already have an account?"
-          variant="ghost"
-          onPress={() => navigation.replace('SignIn')}
-        />
+        <Button label="Already have an account?" variant="ghost" onPress={() => navigation.replace('SignIn')} />
       </View>
     </KeyboardAvoidingView>
   );
@@ -72,25 +61,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#F5F5F4',
+    backgroundColor: palette.background,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    backgroundColor: palette.surface,
+    borderRadius: 24,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
+    marginBottom: 4,
+    color: palette.text,
+  },
+  subtitle: {
+    color: palette.muted,
     marginBottom: 20,
   },
   error: {
-    color: '#DC2626',
+    color: palette.danger,
     marginBottom: 10,
   },
 });
