@@ -38,6 +38,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [shopColor, setShopColor] = useState(SHOP_PRESETS[0]?.color ?? shopColors[0]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showNewListForm, setShowNewListForm] = useState(false);
   const { lists, loadingLists, fetchLists, createList, deleteList, items } = useShoppingStore();
 
   const greetingName = useMemo(() => {
@@ -76,6 +77,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       setCustomShopName('');
       setSelectedShop(SHOP_PRESETS[0]?.label ?? 'Kaufland');
       setShopColor(SHOP_PRESETS[0]?.color ?? shopColors[0]);
+      setShowNewListForm(false);
     } catch (err) {
       setError((err as Error)?.message ?? 'Unable to create list');
     } finally {
@@ -116,67 +118,76 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.greetingLabel}>Welcome back</Text>
           <Text style={styles.greetingValue}>{greetingName}</Text>
         </View>
-        <Text style={styles.signOut} onPress={signOut}>
-          Sign out
-        </Text>
+        <View style={styles.headerActions}>
+          <Button
+            label={showNewListForm ? 'Close' : 'Add new list'}
+            variant="secondary"
+            onPress={() => setShowNewListForm((prev) => !prev)}
+          />
+          <Text style={styles.signOut} onPress={signOut}>
+            Sign out
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.newListCard}>
-        <Text style={styles.sectionTitle}>Plan your next run</Text>
-        <Text style={styles.sectionSubtitle}>Name the list, assign the store, and choose a color.</Text>
-        <Text style={styles.inputLabel}>List name</Text>
-        <TextInput
-          value={newListTitle}
-          onChangeText={setNewListTitle}
-          placeholder="e.g. Friday dinner party"
-          placeholderTextColor={palette.muted}
-          style={styles.input}
-        />
-        <Text style={styles.inputLabel}>Shop (optional)</Text>
-        <View style={styles.shopOptionsRow}>
-          {SHOP_PRESETS.map((option) => {
-            const isSelected = selectedShop === option.label;
-            return (
-              <Pressable
-                key={option.label}
-                style={[styles.shopOption, isSelected && styles.shopOptionSelected]}
-                onPress={() => {
-                  setSelectedShop(option.label);
-                  setShopColor(option.color);
-                  setCustomShopName('');
-                }}
-              >
-                <View style={[styles.shopOptionSwatch, { backgroundColor: option.color }]} />
-                <Text style={styles.shopOptionLabel}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
-          <Pressable
-            key={CUSTOM_SHOP_OPTION}
-            style={[
-              styles.shopOption,
-              selectedShop === CUSTOM_SHOP_OPTION && styles.shopOptionSelected,
-            ]}
-            onPress={() => setSelectedShop(CUSTOM_SHOP_OPTION)}
-          >
-            <View style={[styles.shopOptionSwatch, styles.customSwatch]} />
-            <Text style={styles.shopOptionLabel}>Custom</Text>
-          </Pressable>
-        </View>
-        {selectedShop === CUSTOM_SHOP_OPTION ? (
+      {showNewListForm ? (
+        <View style={styles.newListCard}>
+          <Text style={styles.sectionTitle}>Plan your next run</Text>
+          <Text style={styles.sectionSubtitle}>Name the list, assign the store, and choose a color.</Text>
+          <Text style={styles.inputLabel}>List name</Text>
           <TextInput
-            value={customShopName}
-            onChangeText={setCustomShopName}
-            placeholder="Type your shop name"
+            value={newListTitle}
+            onChangeText={setNewListTitle}
+            placeholder="e.g. Friday dinner party"
             placeholderTextColor={palette.muted}
             style={styles.input}
           />
-        ) : null}
-        <Text style={styles.inputLabel}>Badge color</Text>
-        <ColorPicker colors={shopColors} selected={shopColor} onSelect={setShopColor} />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button label="Save list" onPress={handleCreateList} loading={creating} />
-      </View>
+          <Text style={styles.inputLabel}>Shop (optional)</Text>
+          <View style={styles.shopOptionsRow}>
+            {SHOP_PRESETS.map((option) => {
+              const isSelected = selectedShop === option.label;
+              return (
+                <Pressable
+                  key={option.label}
+                  style={[styles.shopOption, isSelected && styles.shopOptionSelected]}
+                  onPress={() => {
+                    setSelectedShop(option.label);
+                    setShopColor(option.color);
+                    setCustomShopName('');
+                  }}
+                >
+                  <View style={[styles.shopOptionSwatch, { backgroundColor: option.color }]} />
+                  <Text style={styles.shopOptionLabel}>{option.label}</Text>
+                </Pressable>
+              );
+            })}
+            <Pressable
+              key={CUSTOM_SHOP_OPTION}
+              style={[
+                styles.shopOption,
+                selectedShop === CUSTOM_SHOP_OPTION && styles.shopOptionSelected,
+              ]}
+              onPress={() => setSelectedShop(CUSTOM_SHOP_OPTION)}
+            >
+              <View style={[styles.shopOptionSwatch, styles.customSwatch]} />
+              <Text style={styles.shopOptionLabel}>Custom</Text>
+            </Pressable>
+          </View>
+          {selectedShop === CUSTOM_SHOP_OPTION ? (
+            <TextInput
+              value={customShopName}
+              onChangeText={setCustomShopName}
+              placeholder="Type your shop name"
+              placeholderTextColor={palette.muted}
+              style={styles.input}
+            />
+          ) : null}
+          <Text style={styles.inputLabel}>Badge color</Text>
+          <ColorPicker colors={shopColors} selected={shopColor} onSelect={setShopColor} />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Button label="Save list" onPress={handleCreateList} loading={creating} />
+        </View>
+      ) : null}
 
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Your lists</Text>
@@ -201,7 +212,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           ListEmptyComponent={
             <EmptyState
               title="No lists yet"
-              description="Start by creating a list for your recurring grocery run or event."
+              description='Tap "Add new list" to start planning your next run.'
             />
           }
         />
@@ -224,6 +235,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   greetingLabel: {
     color: palette.muted,
     fontSize: 14,
@@ -236,6 +251,7 @@ const styles = StyleSheet.create({
   signOut: {
     color: palette.danger,
     fontWeight: '600',
+    marginLeft: 12,
   },
   newListCard: {
     backgroundColor: palette.surface,
