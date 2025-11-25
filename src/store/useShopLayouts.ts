@@ -9,7 +9,7 @@ type LayoutStore = {
   loading: boolean;
   error: string | null;
   fetchLayout: (userId: string, shopName: string) => Promise<ShopLayoutArea[]>;
-  saveLayout: (userId: string, shopName: string, areas: string[]) => Promise<void>;
+  saveLayout: (userId: string, shopName: string, areas: string[]) => Promise<ShopLayoutArea[]>;
 };
 
 const toAreaRecords = (userId: string, shopName: string, names: string[]): ShopLayoutArea[] =>
@@ -76,16 +76,33 @@ export const useShopLayouts = create<LayoutStore>((set, get) => ({
 
     set({ loading: true, error: null });
 
-    const { error } = await supabase.from('shop_layout_areas').upsert(records);
-    if (error) {
-      set({ loading: false, error: error.message });
-      throw error;
+    const { error: deleteError } = await supabase
+      .from('shop_layout_areas')
+      .delete()
+      .eq('user_id', userId)
+      .ilike('shop_name', shopName);
+    if (deleteError) {
+      set({ loading: false, error: deleteError.message });
+      throw deleteError;
+    }
+
+    const { data, error: insertError } = await supabase
+      .from('shop_layout_areas')
+      .insert(records)
+      .select('*')
+      .order('sequence', { ascending: true });
+
+    if (insertError) {
+      set({ loading: false, error: insertError.message });
+      throw insertError;
     }
 
     set((state) => ({
       loading: false,
-      layouts: { ...state.layouts, [cacheKey]: records },
+      layouts: { ...state.layouts, [cacheKey]: data ?? records },
     }));
+
+    return data ?? records;
   },
 }));
 

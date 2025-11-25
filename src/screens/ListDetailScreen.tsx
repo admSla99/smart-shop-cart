@@ -18,7 +18,7 @@ import { fetchAiSuggestions } from '../lib/ai';
 import { sortByLayout } from '../lib/layoutSorting';
 import { useShopLayouts } from '../store/useShopLayouts';
 import { useAuth } from '../contexts/AuthContext';
-import type { AiSuggestion } from '../types';
+import type { AiSuggestion, ShopLayoutArea } from '../types';
 import { useShoppingStore } from '../store/useShoppingLists';
 import { getReadableTextColor, palette } from '../theme/colors';
 
@@ -27,7 +27,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'ListDetail'>;
 const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const { listId, title, shopName, shopColor } = route.params;
   const { user } = useAuth();
-  const { fetchLayout } = useShopLayouts();
+  const { fetchLayout, saveLayout } = useShopLayouts();
   const {
     items,
     loadingItems,
@@ -45,6 +45,11 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
   const [sorting, setSorting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [layoutAreas, setLayoutAreas] = useState<ShopLayoutArea[]>([]);
+  const [layoutLoading, setLayoutLoading] = useState(false);
+  const [layoutError, setLayoutError] = useState<string | null>(null);
+  const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
+  const [newAreaName, setNewAreaName] = useState('');
 
   const loading = loadingItems[listId];
 
@@ -55,6 +60,26 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadLayout = useCallback(async () => {
+    if (!user?.id) return;
+    setLayoutLoading(true);
+    setLayoutError(null);
+    try {
+      const layout = await fetchLayout(user.id, shopName ?? 'Generic');
+      setLayoutAreas(layout);
+    } catch (err) {
+      setLayoutError((err as Error)?.message ?? 'Unable to load layout');
+    } finally {
+      setLayoutLoading(false);
+    }
+  }, [fetchLayout, shopName, user?.id]);
+
+  useEffect(() => {
+    if (layoutEditorOpen) {
+      loadLayout();
+    }
+  }, [layoutEditorOpen, loadLayout]);
 
   const handleAdd = async () => {
     setSubmitting(true);
@@ -262,6 +287,121 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
           </View>
         ))}
       </View>
+
+      {shopName ? (
+        <View style={styles.layoutCard}>
+          <View style={styles.layoutHeader}>
+            <Text style={styles.sectionTitle}>Shop layout</Text>
+            <Button
+              label={layoutEditorOpen ? 'Close' : 'Edit layout'}
+              variant="ghost"
+              onPress={() => setLayoutEditorOpen((prev) => !prev)}
+            />
+          </View>
+          {layoutEditorOpen ? (
+            <>
+              {layoutLoading ? (
+                <ActivityIndicator style={{ marginVertical: 12 }} color={palette.accent} />
+              ) : null}
+              {layoutError ? <Text style={styles.error}>{layoutError}</Text> : null}
+              {layoutAreas.map((area, index) => (
+                <View key={`${area.id}-${index}`} style={styles.areaRow}>
+                  <Text style={styles.areaName}>
+                    {index + 1}. {area.area_name}
+                  </Text>
+                  <View style={styles.areaActions}>
+                    <Button
+                      label="↑"
+                      variant="ghost"
+                      onPress={() => {
+                        if (index === 0) return;
+                        setLayoutAreas((prev) => {
+                          const copy = [...prev];
+                          [copy[index - 1], copy[index]] = [copy[index], copy[index - 1]];
+                          return copy.map((a, idx) => ({ ...a, sequence: idx + 1 }));
+                        });
+                      }}
+                    />
+                    <Button
+                      label="↓"
+                      variant="ghost"
+                      onPress={() => {
+                        setLayoutAreas((prev) => {
+                          if (index === prev.length - 1) return prev;
+                          const copy = [...prev];
+                          [copy[index + 1], copy[index]] = [copy[index], copy[index + 1]];
+                          return copy.map((a, idx) => ({ ...a, sequence: idx + 1 }));
+                        });
+                      }}
+                    />
+                    <Button
+                      label="Remove"
+                      variant="ghost"
+                      onPress={() =>
+                        setLayoutAreas((prev) =>
+                          prev.filter((_, idx) => idx !== index).map((a, idx) => ({
+                            ...a,
+                            sequence: idx + 1,
+                          })),
+                        )
+                      }
+                    />
+                  </View>
+                </View>
+              ))}
+              <View style={styles.newAreaRow}>
+                <TextInput
+                  placeholder="Add area name"
+                  placeholderTextColor={palette.muted}
+                  value={newAreaName}
+                  onChangeText={setNewAreaName}
+                  style={styles.input}
+                />
+                <Button
+                  label="Add"
+                  variant="secondary"
+                  onPress={() => {
+                    const trimmed = newAreaName.trim();
+                    if (!trimmed) return;
+                    setLayoutAreas((prev) => [
+                      ...prev,
+                      {
+                        id: `${trimmed}-${Date.now()}`,
+                        user_id: user!.id,
+                        shop_name: shopName,
+                        area_name: trimmed,
+                        sequence: prev.length + 1,
+                      },
+                    ]);
+                    setNewAreaName('');
+                  }}
+                />
+              </View>
+              <Button
+                label="Save layout"
+                onPress={async () => {
+                  if (!user?.id) return;
+                  setLayoutLoading(true);
+                  setLayoutError(null);
+                  try {
+                    const updated = await saveLayout(user.id, shopName, layoutAreas.map((a) => a.area_name));
+                    setLayoutAreas(updated.map((area, idx) => ({ ...area, sequence: idx + 1 })));
+                  } catch (err) {
+                    setLayoutError((err as Error)?.message ?? 'Unable to save layout');
+                  } finally {
+                    setLayoutLoading(false);
+                  }
+                }}
+                loading={layoutLoading}
+              />
+            </>
+          ) : (
+            <Text style={styles.sectionSubtitle}>
+              Configure the ordered areas for this shop to get the best sorting.
+            </Text>
+          )}
+        </View>
+      ) : null}
     </ScrollView>
   );
 };
@@ -285,6 +425,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: palette.text,
     marginBottom: 12,
+  },
+  sectionSubtitle: {
+    color: palette.muted,
+    marginTop: 4,
   },
   input: {
     borderWidth: 1,
@@ -333,6 +477,39 @@ const styles = StyleSheet.create({
   suggestionReason: {
     color: palette.muted,
     marginTop: 2,
+  },
+  layoutCard: {
+    backgroundColor: palette.surface,
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  layoutHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  areaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.border,
+  },
+  areaName: {
+    color: palette.text,
+    fontWeight: '600',
+    flex: 1,
+  },
+  areaActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  newAreaRow: {
+    marginTop: 12,
   },
   infoBanner: {
     borderRadius: 14,
