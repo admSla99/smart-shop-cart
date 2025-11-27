@@ -1,8 +1,10 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   ActivityIndicator,
   FlatList,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -44,6 +46,7 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const [error, setError] = useState<string | null>(null);
   const [layoutAreas, setLayoutAreas] = useState<ShopLayoutArea[]>([]);
   const [templates, setTemplates] = useState<ShopLayoutTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
@@ -78,10 +81,13 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
     try {
       const data = await useShopLayouts.getState().fetchTemplates(shopName);
       setTemplates(data);
+      if (data.length && !selectedTemplate) {
+        setSelectedTemplate(data[0].template_name);
+      }
     } catch (err) {
       setLayoutError((err as Error)?.message ?? 'Unable to load templates');
     }
-  }, [shopName]);
+  }, [shopName, selectedTemplate]);
 
   useEffect(() => {
     if (layoutEditorOpen) {
@@ -255,19 +261,50 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
               {templates.length > 0 ? (
                 <View style={styles.templateRow}>
                   <Text style={styles.sectionSubtitle}>Templates available for this shop</Text>
+                  <View style={styles.templateList}>
+                    {[...new Set(templates.map((t) => t.template_name))].map((name) => {
+                      const isSelected = selectedTemplate === name;
+                      return (
+                        <Pressable
+                          key={name}
+                          style={[styles.templateChip, isSelected && styles.templateChipSelected]}
+                          onPress={() => setSelectedTemplate(name)}
+                        >
+                          <Text style={styles.templateChipLabel}>{name}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                   <Button
-                    label="Use template"
+                    label="Apply template"
                     variant="secondary"
                     onPress={() => {
-                      if (!user?.id) return;
-                      setLayoutAreas(
-                        templates.map((t, idx) => ({
-                          id: `${t.id}-${idx}`,
-                          user_id: user.id,
-                          shop_name: shopName ?? 'Generic',
-                          area_name: t.area_name,
-                          sequence: idx + 1,
-                        })),
+                      if (!user?.id || !selectedTemplate) return;
+                      const areas = templates
+                        .filter((t) => t.template_name === selectedTemplate)
+                        .sort((a, b) => a.sequence - b.sequence);
+                      if (!areas.length) return;
+                      Alert.alert(
+                        'Apply template',
+                        `Replace your layout with "${selectedTemplate}"?`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Apply',
+                            style: 'destructive',
+                            onPress: () => {
+                              setLayoutAreas(
+                                areas.map((t, idx) => ({
+                                  id: `${t.id}-${idx}`,
+                                  user_id: user.id,
+                                  shop_name: shopName ?? 'Generic',
+                                  area_name: t.area_name,
+                                  sequence: idx + 1,
+                                })),
+                              );
+                            },
+                          },
+                        ],
                       );
                     }}
                   />
@@ -450,6 +487,29 @@ const styles = StyleSheet.create({
   templateRow: {
     marginTop: 10,
     marginBottom: 10,
+  },
+  templateList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 8,
+  },
+  templateChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.card,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  templateChipSelected: {
+    borderColor: palette.primary,
+    backgroundColor: 'rgba(99,102,241,0.15)',
+  },
+  templateChipLabel: {
+    color: palette.text,
+    fontWeight: '600',
   },
   infoBanner: {
     borderRadius: 14,

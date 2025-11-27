@@ -31,6 +31,7 @@ export type ShopLayoutArea = {
 export type ShopLayoutTemplate = {
   id: string;
   shop_name: string;
+  template_name: string;
   area_name: string;
   sequence: number;
   created_at?: string;

@@ -41,6 +41,7 @@ create table if not exists public.shop_layout_areas (
 create table if not exists public.shop_layout_templates (
   id uuid primary key default gen_random_uuid(),
   shop_name text not null,
+  template_name text not null default 'Default',
   area_name text not null,
   sequence integer not null,
   created_at timestamptz not null default timezone('utc'::text, now())
