@@ -126,12 +126,17 @@ export const useShopLayouts = create<LayoutStore>((set, get) => ({
       throw error;
     }
 
-    set((state) => ({
-      loading: false,
-      templates: { ...state.templates, [cacheKey]: data ?? [] },
+    const normalized = (data ?? []).map((template) => ({
+      ...template,
+      template_name: template.template_name || 'Default',
     }));
 
-    return data ?? [];
+    set((state) => ({
+      loading: false,
+      templates: { ...state.templates, [cacheKey]: normalized },
+    }));
+
+    return normalized;
   },
 }));
 

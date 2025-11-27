@@ -275,9 +275,15 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
                       );
                     })}
                   </View>
+                  <Text style={styles.templateHint}>
+                    {selectedTemplate
+                      ? `Selected: ${selectedTemplate}`
+                      : 'Choose a template to preview.'}
+                  </Text>
                   <Button
                     label="Apply template"
                     variant="secondary"
+                    disabled={!selectedTemplate || templates.length === 0}
                     onPress={() => {
                       if (!user?.id || !selectedTemplate) return;
                       const areas = templates
@@ -510,6 +516,10 @@ const styles = StyleSheet.create({
   templateChipLabel: {
     color: palette.text,
     fontWeight: '600',
+  },
+  templateHint: {
+    color: palette.muted,
+    marginBottom: 8,
   },
   infoBanner: {
     borderRadius: 14,
