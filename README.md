@@ -11,6 +11,9 @@ Cross‑platform shopping list app with Supabase auth/storage, layout‑aware so
 - Layout-aware sorting: send items + layout to the edge function to get ordered aisles; results saved on items.
 - Dark, touch-friendly UI; works on iOS/Android and web.
 
+### Contributor guide
+- See [`AGENTS.md`](AGENTS.md) for repository guidelines; keep it updated with key codebase details and processes as they evolve.
+
 ### Quick summary
 - Expo + React Native with native/web navigation flow and Supabase-backed data layer (Zustand stores).
 - Supabase schema & RLS in [`supabase-schema.sql`](supabase-schema.sql); includes template read + authenticated write policies.
