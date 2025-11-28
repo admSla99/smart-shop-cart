@@ -1,21 +1,26 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   ActivityIndicator,
   FlatList,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  Platform,
 } from 'react-native';
 
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { ItemRow } from '../components/ItemRow';
 import type { AppStackParamList } from '../navigation/AppNavigator';
-import { fetchAiSuggestions } from '../lib/ai';
-import type { AiSuggestion } from '../types';
+import { sortByLayout } from '../lib/layoutSorting';
+import { useShopLayouts } from '../store/useShopLayouts';
+import { useAuth } from '../contexts/AuthContext';
+import type { ShopLayoutArea, ShopLayoutTemplate } from '../types';
 import { useShoppingStore } from '../store/useShoppingLists';
 import { getReadableTextColor, palette } from '../theme/colors';
 
@@ -23,6 +28,8 @@ type Props = NativeStackScreenProps<AppStackParamList, 'ListDetail'>;
 
 const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const { listId, title, shopName, shopColor } = route.params;
+  const { user } = useAuth();
+  const { fetchLayout, saveLayout } = useShopLayouts();
   const {
     items,
     loadingItems,
@@ -30,14 +37,22 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
     addItem,
     toggleItem,
     deleteItem,
+    applySortedOrder,
   } = useShoppingStore();
   const listItems = items[listId] ?? [];
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
+  const [sorting, setSorting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [layoutAreas, setLayoutAreas] = useState<ShopLayoutArea[]>([]);
+  const [templates, setTemplates] = useState<ShopLayoutTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [layoutLoading, setLayoutLoading] = useState(false);
+  const [layoutError, setLayoutError] = useState<string | null>(null);
+  const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
+  const [newAreaName, setNewAreaName] = useState('');
+  const [templateMessage, setTemplateMessage] = useState<string | null>(null);
 
   const loading = loadingItems[listId];
 
@@ -48,6 +63,40 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadLayout = useCallback(async () => {
+    if (!user?.id) return;
+    setLayoutLoading(true);
+    setLayoutError(null);
+    try {
+      const layout = await fetchLayout(user.id, shopName ?? 'Generic');
+      setLayoutAreas(layout);
+    } catch (err) {
+      setLayoutError((err as Error)?.message ?? 'Unable to load layout');
+    } finally {
+      setLayoutLoading(false);
+    }
+  }, [fetchLayout, shopName, user?.id]);
+
+  const loadTemplates = useCallback(async () => {
+    if (!shopName) return;
+    try {
+      const data = await useShopLayouts.getState().fetchTemplates(shopName);
+      setTemplates(data);
+      if (data.length && !selectedTemplate) {
+        setSelectedTemplate(data[0].template_name);
+      }
+    } catch (err) {
+      setLayoutError((err as Error)?.message ?? 'Unable to load templates');
+    }
+  }, [shopName, selectedTemplate]);
+
+  useEffect(() => {
+    if (layoutEditorOpen) {
+      loadLayout();
+      loadTemplates();
+    }
+  }, [layoutEditorOpen, loadLayout, loadTemplates]);
 
   const handleAdd = async () => {
     setSubmitting(true);
@@ -76,41 +125,95 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
     deleteItem(listId, itemId).catch((err) => setError(err.message));
   };
 
-  const handleAiSuggestions = async () => {
-    setAiLoading(true);
+  const confirmApplyTemplate = () => {
+    if (!selectedTemplate) return;
+    const message = `Replace your layout with "${selectedTemplate}"?`;
+    const apply = () => applyTemplate(selectedTemplate);
+
+    if (Platform.OS === 'web') {
+      const confirmFn =
+        typeof globalThis !== 'undefined' && typeof (globalThis as { confirm?: (msg?: string) => boolean }).confirm === 'function'
+          ? (globalThis as { confirm: (msg?: string) => boolean }).confirm
+          : undefined;
+      if (!confirmFn || confirmFn(message)) {
+        apply();
+      }
+      return;
+    }
+
+    Alert.alert('Apply template', message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Apply', style: 'destructive', onPress: apply },
+    ]);
+  };
+
+  const applyTemplate = async (templateName: string) => {
+    if (!user?.id) return;
+    const areas = templates
+      .filter((t) => (t.template_name ?? 'Default') === templateName)
+      .sort((a, b) => a.sequence - b.sequence);
+    if (!areas.length) {
+      setTemplateMessage('No areas found for this template.');
+      return;
+    }
+    setTemplateMessage(null);
+    setLayoutLoading(true);
+    try {
+      const nextAreas = areas.map((t, idx) => ({
+        id: `${t.id}-${idx}`,
+        user_id: user.id,
+        shop_name: shopName ?? 'Generic',
+        area_name: t.area_name,
+        sequence: idx + 1,
+      }));
+      setLayoutAreas(nextAreas);
+      const saved = await saveLayout(
+        user.id,
+        shopName ?? 'Generic',
+        nextAreas.map((a) => a.area_name),
+      );
+      setLayoutAreas(saved.map((a, idx) => ({ ...a, sequence: idx + 1 })));
+      setTemplateMessage(`Applied "${templateName}" with ${nextAreas.length} areas.`);
+    } catch (err) {
+      setLayoutError((err as Error)?.message ?? 'Unable to apply template');
+    } finally {
+      setLayoutLoading(false);
+    }
+    return;
+  };
+
+  const ensureLayout = useCallback(async () => {
+    if (!user?.id) return [];
+    try {
+      const layout = await fetchLayout(user.id, shopName ?? 'Generic');
+      return layout;
+    } catch (err) {
+      setError((err as Error)?.message ?? 'Unable to load layout');
+      return [];
+    }
+  }, [fetchLayout, shopName, user?.id]);
+
+  const handleSortByLayout = async () => {
+    if (!user?.id) {
+      setError('You must be signed in to sort.');
+      return;
+    }
+    setSorting(true);
     setError(null);
     try {
-      const suggestions = await fetchAiSuggestions(
-        title,
-        listItems.map((item) => item.name),
-      );
-      setAiSuggestions(suggestions);
-    } catch (err) {
-      setError((err as Error)?.message ?? 'Unable to request AI suggestions');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const applySuggestion = async (suggestion: AiSuggestion) => {
-    try {
-      const parsedQuantity = suggestion.quantity ? parseInt(suggestion.quantity, 10) : undefined;
-      await addItem(listId, {
-        name: suggestion.name,
-        quantity: Number.isNaN(parsedQuantity) ? undefined : parsedQuantity,
+      const layout = await ensureLayout();
+      const sorted = await sortByLayout({
+        shopName: shopName ?? 'Generic',
+        items: listItems.map((item) => ({ id: item.id, name: item.name, quantity: item.quantity })),
+        layout,
       });
-      setAiSuggestions((prev) => prev.filter((item) => item.name !== suggestion.name));
+      await applySortedOrder(listId, sorted);
     } catch (err) {
-      setError((err as Error)?.message ?? 'Unable to add suggestion');
+      setError((err as Error)?.message ?? 'Unable to sort items');
+    } finally {
+      setSorting(false);
     }
   };
-
-  const aiDescription = useMemo(() => {
-    if (!aiSuggestions.length) {
-      return 'Let AI analyze your current items and suggest what you might be missing.';
-    }
-    return 'Tap to add any of these smart recommendations to your list.';
-  }, [aiSuggestions]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -162,6 +265,16 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
       </View>
 
       <Text style={styles.sectionTitle}>Items</Text>
+      {listItems.length > 0 ? (
+        <View style={{ marginBottom: 12 }}>
+          <Button
+            label="Sort by shop layout"
+            onPress={handleSortByLayout}
+            loading={sorting}
+            variant="secondary"
+          />
+        </View>
+      ) : null}
       {loading ? (
         <ActivityIndicator style={{ marginVertical: 20 }} color={palette.accent} />
       ) : (
@@ -172,6 +285,7 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
             <ItemRow
               name={item.name}
               quantity={item.quantity}
+              areaName={item.area_name}
               isChecked={item.is_checked}
               onToggle={() => handleToggle(item.id, item.is_checked)}
               onDelete={() => handleDelete(item.id)}
@@ -181,36 +295,166 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
           ListEmptyComponent={
             <EmptyState
               title="No items yet"
-              description="Add your first item or ask AI to help with suggestions."
+              description="Add your first item to get started."
             />
           }
         />
       )}
 
-      <View style={styles.aiCard}>
-        <Text style={styles.sectionTitle}>AI shopping assistant</Text>
-        <Text style={styles.aiDescription}>{aiDescription}</Text>
-        <Button
-          label={aiSuggestions.length ? 'Refresh suggestions' : 'Generate suggestions'}
-          variant="secondary"
-          onPress={handleAiSuggestions}
-          loading={aiLoading}
-        />
-        {aiSuggestions.map((suggestion) => (
-          <View key={suggestion.name} style={styles.suggestionRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.suggestionTitle}>{suggestion.name}</Text>
-              {suggestion.quantity ? (
-                <Text style={styles.suggestionMeta}>{suggestion.quantity}</Text>
-              ) : null}
-              {suggestion.reason ? (
-                <Text style={styles.suggestionReason}>{suggestion.reason}</Text>
-              ) : null}
-            </View>
-            <Button label="Add" onPress={() => applySuggestion(suggestion)} variant="ghost" />
+      {shopName ? (
+        <View style={styles.layoutCard}>
+          <View style={styles.layoutHeader}>
+            <Text style={styles.sectionTitle}>Shop layout</Text>
+            <Button
+              label={layoutEditorOpen ? 'Close' : 'Edit layout'}
+              variant="ghost"
+              onPress={() => setLayoutEditorOpen((prev) => !prev)}
+            />
           </View>
-        ))}
-      </View>
+          {layoutEditorOpen ? (
+            <>
+              {layoutLoading ? (
+                <ActivityIndicator style={{ marginVertical: 12 }} color={palette.accent} />
+              ) : null}
+              {layoutError ? <Text style={styles.error}>{layoutError}</Text> : null}
+              {templates.length > 0 ? (
+                <View style={styles.templateRow}>
+                  <Text style={styles.sectionSubtitle}>Templates available for this shop</Text>
+                  <View style={styles.templateList}>
+                    {[...new Set(templates.map((t) => t.template_name))].map((name) => {
+                      const isSelected = selectedTemplate === name;
+                      const count = templates.filter((t) => t.template_name === name).length;
+                      return (
+                        <Pressable
+                          key={name}
+                          style={[styles.templateChip, isSelected && styles.templateChipSelected]}
+                          onPress={() => setSelectedTemplate(name)}
+                        >
+                          <Text style={styles.templateChipLabel}>
+                            {name} ({count})
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Text style={styles.templateHint}>
+                    {selectedTemplate
+                      ? `Selected: ${selectedTemplate}`
+                      : templates.length === 0
+                        ? 'No templates available for this shop.'
+                        : 'Choose a template to preview.'}
+                  </Text>
+                  <Button
+                    label="Apply template"
+                    variant="secondary"
+                    disabled={!selectedTemplate || templates.length === 0 || layoutLoading}
+                    onPress={confirmApplyTemplate}
+                  />
+                  {templateMessage ? <Text style={styles.templateHint}>{templateMessage}</Text> : null}
+                </View>
+              ) : null}
+              {layoutAreas.map((area, index) => (
+                <View key={`${area.id}-${index}`} style={styles.areaRow}>
+                  <Text style={styles.areaName}>
+                    {index + 1}. {area.area_name}
+                  </Text>
+                  <View style={styles.areaActions}>
+                    <Button
+                      label="↑"
+                      variant="ghost"
+                      onPress={() => {
+                        if (index === 0) return;
+                        setLayoutAreas((prev) => {
+                          const copy = [...prev];
+                          [copy[index - 1], copy[index]] = [copy[index], copy[index - 1]];
+                          return copy.map((a, idx) => ({ ...a, sequence: idx + 1 }));
+                        });
+                      }}
+                    />
+                    <Button
+                      label="↓"
+                      variant="ghost"
+                      onPress={() => {
+                        setLayoutAreas((prev) => {
+                          if (index === prev.length - 1) return prev;
+                          const copy = [...prev];
+                          [copy[index + 1], copy[index]] = [copy[index], copy[index + 1]];
+                          return copy.map((a, idx) => ({ ...a, sequence: idx + 1 }));
+                        });
+                      }}
+                    />
+                    <Button
+                      label="Remove"
+                      variant="ghost"
+                      onPress={() =>
+                        setLayoutAreas((prev) =>
+                          prev.filter((_, idx) => idx !== index).map((a, idx) => ({
+                            ...a,
+                            sequence: idx + 1,
+                          })),
+                        )
+                      }
+                    />
+                  </View>
+                </View>
+              ))}
+              <View style={styles.newAreaRow}>
+                <TextInput
+                  placeholder="Add area name"
+                  placeholderTextColor={palette.muted}
+                  value={newAreaName}
+                  onChangeText={setNewAreaName}
+                  style={styles.input}
+                />
+                <Button
+                  label="Add"
+                  variant="secondary"
+                  onPress={() => {
+                    const trimmed = newAreaName.trim();
+                    if (!trimmed) return;
+                    setLayoutAreas((prev) => [
+                      ...prev,
+                      {
+                        id: `${trimmed}-${Date.now()}`,
+                        user_id: user!.id,
+                        shop_name: shopName,
+                        area_name: trimmed,
+                        sequence: prev.length + 1,
+                      },
+                    ]);
+                    setNewAreaName('');
+                  }}
+                />
+              </View>
+              <Button
+                label="Save layout"
+                onPress={async () => {
+                  if (!user?.id) return;
+                  setLayoutLoading(true);
+                  setLayoutError(null);
+                  try {
+                    const updated = await saveLayout(
+                      user.id,
+                      shopName ?? 'Generic',
+                      layoutAreas.map((a) => a.area_name),
+                    );
+                    setLayoutAreas(updated.map((area, idx) => ({ ...area, sequence: idx + 1 })));
+                  } catch (err) {
+                    setLayoutError((err as Error)?.message ?? 'Unable to save layout');
+                  } finally {
+                    setLayoutLoading(false);
+                  }
+                }}
+                loading={layoutLoading}
+              />
+            </>
+          ) : (
+            <Text style={styles.sectionSubtitle}>
+              Configure the ordered areas for this shop to get the best sorting.
+            </Text>
+          )}
+        </View>
+      ) : null}
     </ScrollView>
   );
 };
@@ -235,6 +479,10 @@ const styles = StyleSheet.create({
     color: palette.text,
     marginBottom: 12,
   },
+  sectionSubtitle: {
+    color: palette.muted,
+    marginTop: 4,
+  },
   input: {
     borderWidth: 1,
     borderColor: palette.border,
@@ -250,38 +498,69 @@ const styles = StyleSheet.create({
     color: palette.danger,
     marginBottom: 8,
   },
-  aiCard: {
-    marginTop: 20,
-    backgroundColor: palette.card,
+  layoutCard: {
+    backgroundColor: palette.surface,
     borderRadius: 18,
     padding: 16,
+    marginTop: 20,
     borderWidth: 1,
     borderColor: palette.border,
   },
-  aiDescription: {
-    color: palette.muted,
-    marginBottom: 12,
-  },
-  suggestionRow: {
+  layoutHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'space-between',
+  },
+  areaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: palette.border,
   },
-  suggestionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  areaName: {
     color: palette.text,
+    fontWeight: '600',
+    flex: 1,
   },
-  suggestionMeta: {
-    color: palette.muted,
-    marginTop: 2,
+  areaActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  suggestionReason: {
+  newAreaRow: {
+    marginTop: 12,
+  },
+  templateRow: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  templateList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 8,
+  },
+  templateChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.card,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  templateChipSelected: {
+    borderColor: palette.primary,
+    backgroundColor: 'rgba(99,102,241,0.15)',
+  },
+  templateChipLabel: {
+    color: palette.text,
+    fontWeight: '600',
+  },
+  templateHint: {
     color: palette.muted,
-    marginTop: 2,
+    marginBottom: 8,
   },
   infoBanner: {
     borderRadius: 14,

@@ -10,6 +10,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ListDetailScreen from '../screens/ListDetailScreen';
 import SignInScreen from '../screens/SignInScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import TemplatesScreen from '../screens/TemplatesScreen';
 import { palette } from '../theme/colors';
 
 export type AuthStackParamList = {
@@ -21,6 +22,7 @@ export type AuthStackParamList = {
 export type AppStackParamList = {
   Home: undefined;
   ListDetail: { listId: string; title: string; shopName?: string | null; shopColor?: string | null };
+  Templates: undefined;
 };
 
 export type AppScreenProps<T extends keyof AppStackParamList> = NativeStackScreenProps<
@@ -62,6 +64,11 @@ const AppFlow = () => (
       name="ListDetail"
       component={ListDetailScreen}
       options={({ route }) => ({ title: route.params.title })}
+    />
+    <MainStack.Screen
+      name="Templates"
+      component={TemplatesScreen}
+      options={{ title: 'Templates' }}
     />
   </MainStack.Navigator>
 );

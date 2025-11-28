@@ -20,7 +20,14 @@ type ShoppingStore = {
   deleteList: (listId: string) => Promise<void>;
   renameList: (listId: string, title: string) => Promise<void>;
   fetchItems: (listId: string) => Promise<void>;
-  addItem: (listId: string, payload: { name: string; quantity?: number }) => Promise<void>;
+  addItem: (
+    listId: string,
+    payload: { name: string; quantity?: number; area_name?: string | null; order_index?: number | null },
+  ) => Promise<void>;
+  applySortedOrder: (
+    listId: string,
+    sorted: { id: string; area_name?: string | null; order_index?: number | null }[],
+  ) => Promise<void>;
   toggleItem: (listId: string, itemId: string, isChecked: boolean) => Promise<void>;
   deleteItem: (listId: string, itemId: string) => Promise<void>;
 };
@@ -116,6 +123,7 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       .from('list_items')
       .select('*')
       .eq('list_id', listId)
+      .order('order_index', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: false });
 
     set((state) => ({
@@ -131,9 +139,19 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       throw new Error('Item name is required');
     }
 
+    const fallbackOrder = (get().items[listId]?.length ?? 0) + 1;
+    const order_index = payload.order_index ?? fallbackOrder;
+
     const { data, error } = await supabase
       .from('list_items')
-      .insert({ list_id: listId, name, quantity: payload.quantity, is_checked: false })
+      .insert({
+        list_id: listId,
+        name,
+        quantity: payload.quantity,
+        area_name: payload.area_name ?? null,
+        order_index,
+        is_checked: false,
+      })
       .select()
       .single();
 
@@ -145,7 +163,14 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
       set((state) => ({
         items: {
           ...state.items,
-          [listId]: [data, ...(state.items[listId] ?? [])],
+          [listId]: [data, ...(state.items[listId] ?? [])].sort((a, b) => {
+            const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
+            const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
+            if (aOrder === bOrder) {
+              return (b.created_at ?? '').localeCompare(a.created_at ?? '');
+            }
+            return aOrder - bOrder;
+          }),
         },
       }));
     }
@@ -184,6 +209,41 @@ export const useShoppingStore = create<ShoppingStore>((set, get) => ({
         [listId]: (state.items[listId] ?? []).filter((item) => item.id !== itemId),
       },
     }));
+  },
+
+  applySortedOrder: async (listId, sorted) => {
+    const updates = sorted.map((row) =>
+      supabase
+        .from('list_items')
+        .update({ area_name: row.area_name ?? null, order_index: row.order_index ?? null })
+        .eq('id', row.id),
+    );
+
+    const results = await Promise.all(updates);
+    const error = results.find((res) => res.error)?.error;
+    if (error) {
+      throw error;
+    }
+
+    set((state) => {
+      const existing = state.items[listId] ?? [];
+      const merged = existing
+        .map((item) => {
+          const updated = sorted.find((row) => row.id === item.id);
+          return updated
+            ? { ...item, area_name: updated.area_name ?? null, order_index: updated.order_index ?? null }
+            : item;
+        })
+        .sort((a, b) => {
+          const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
+          const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
+          return aOrder - bOrder;
+        });
+
+      return {
+        items: { ...state.items, [listId]: merged },
+      };
+    });
   },
 }));
 

@@ -1,79 +1,85 @@
 ## Smart Shopping List (Expo + Supabase)
 
-Minimal shopping list mobile app powered by Expo / React Native with Supabase authentication & storage and an AI-ready extension point for smart recommendations.
+Cross‑platform shopping list app with Supabase auth/storage, layout‑aware sorting, and a template manager for reusable store layouts.
 
 ### Features
-- Email/password authentication backed by Supabase auth + profiles table.
-- Create, rename, and delete shopping lists scoped per account.
-- Add, check, uncheck, and remove items from each list with optimistic UI.
-- Lists capture an optional shop name plus badge color so you know where each run is intended.
-- Mock AI assistant that can be swapped for a real endpoint when credentials are provided.
-- Typed Supabase client with AsyncStorage persistence so sessions survive restarts.
-- Opinionated dark theme UI for a professional, minimal look.
+- Supabase email/password auth with persisted sessions.
+- Shopping lists per user: create, rename, delete; optional shop name + badge color.
+- Items per list: add, check/uncheck, delete with live updates.
+- Shop layout editor: reorder areas, add/remove, save per shop (per user).
+- Template support: load/apply templates for a shop; manage templates globally (new Templates screen) with full CRUD.
+- Layout-aware sorting: send items + layout to the edge function to get ordered aisles; results saved on items.
+- Dark, touch-friendly UI; works on iOS/Android and web.
 
 ### Quick summary
-- Expo + React Native frontend with navigation, auth flow, and shopping list CRUD screens.
-- Supabase schema & RLS defined in [`supabase-schema.sql`](supabase-schema.sql) so new projects can apply it quickly.
-- AI hook (`src/lib/ai.ts`) already handles switching between mock data and a real endpoint based on `.env` keys.
-- Dark UI with configurable per-store badge colors for quick visual scanning.
+- Expo + React Native with native/web navigation flow and Supabase-backed data layer (Zustand stores).
+- Supabase schema & RLS in [`supabase-schema.sql`](supabase-schema.sql); includes template read + authenticated write policies.
+- Edge function `supabase/functions/sort-by-layout` wraps OpenRouter for AI sorting (configurable via env).
 
 ### Getting Started
 1. **Install tooling**
    - Node 20+ and npm
-   - Expo CLI (`npm install -g expo` optional)
+   - Expo CLI (`npm install -g expo`) optional
 2. **Install dependencies**
    ```bash
    npm install
    ```
 3. **Configure environment**
-   - Copy `.env.example` to `.env`.
-   - Fill in your Supabase project values (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`).
-   - (Optional) populate `EXPO_PUBLIC_AI_SERVICE_URL` and `EXPO_PUBLIC_AI_API_KEY` to hit a real AI service; otherwise the mock suggestions stay active.
+   - Copy `.env.example` to `.env` (or set expo config `extra` values).
+   - Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+   - Optional: `EXPO_PUBLIC_AI_SERVICE_URL` and `EXPO_PUBLIC_AI_API_KEY` if pointing to a real AI service; otherwise the mock path is used.
 4. **Run locally**
    ```bash
    npm start
    ```
-   Choose iOS / Android simulator or Expo Go client.
+   Launch on iOS/Android simulator or web via Expo.
 
 ### Run on a physical device
-1. Install the **Expo Go** app from the App Store or Google Play.
-2. Run `npm start` and keep the phone on the same Wi‑Fi network as your computer.
-3. Scan the QR code displayed by Expo CLI (press `t` to switch to Tunnel mode if LAN is blocked).
-4. Expo Go loads the bundle; shake the device (or open the Expo Go menu) to reload and enable fast refresh while developing.
+1. Install **Expo Go** (App Store / Google Play).
+2. Run `npm start` on your machine (same Wi‑Fi).
+3. Scan the QR code (press `t` in CLI for Tunnel if LAN is blocked).
+4. Use Expo Go menu to reload; fast refresh is enabled.
 
 ### Supabase setup
-1. Create a new project in the Supabase dashboard.
-2. Run the SQL in [`supabase-schema.sql`](supabase-schema.sql) via the SQL editor to create tables and RLS policies:
-   - `profiles` stores metadata synced after sign up.
-   - `shopping_lists` holds list names + optional `shop_name` + `shop_color` (owned by `user_id`).
-   - `list_items` links each item to a list with cascade deletes.
-3. Under Authentication → Providers, ensure Email auth is enabled.
-4. Grab the project URL and anon public key from Project Settings → API and place them in `.env`.
+1. Create a Supabase project.
+2. Run the SQL in [`supabase-schema.sql`](supabase-schema.sql):
+   - Tables: `profiles`, `shopping_lists`, `list_items`, `shop_layout_areas`, `shop_layout_templates`.
+   - RLS: user-scoped policies for lists/items/layouts; public read on templates; **authenticated write** on templates (`Templates manageable by authenticated users`).
+3. Enable Email auth under Authentication → Providers.
+4. Copy the project URL and anon key (Project Settings → API) into your `.env`.
 
-### AI integration plan
-- `src/lib/ai.ts` centralizes the AI client. When `EXPO_PUBLIC_AI_SERVICE_URL` and `EXPO_PUBLIC_AI_API_KEY` are provided the app will `POST` `{ listTitle, items }` to that endpoint; otherwise it returns mock suggestions so UI flows remain testable.
-- `ListDetailScreen` surfaces the AI CTA and renders responses, so swapping to a production model only requires changing the fetch logic.
-- Future enhancements: log AI suggestions back to Supabase, allow multi-select suggestions, or schedule background reminders based on model output.
+### Templates & layouts
+- Apply templates inside a list: open “Edit layout”, choose a template, apply; the layout is saved per user/shop.
+- Manage templates globally: Home → Templates screen. Create/edit/delete templates for any shop; areas are ordered one per line.
+- Layouts are fully replaced on save to avoid duplication; shop names are normalized internally.
+
+### AI layout-aware sorting
+- Function: `supabase/functions/sort-by-layout` accepts `{ shopName, items, layout }` and returns ordered `area_name` + `order_index`.
+- Configure `OPENROUTER_API_KEY` (and optional `OPENROUTER_MODEL`) in the function environment before deploying.
+- Client helpers: `src/lib/layoutSorting.ts`, `src/store/useShopLayouts.ts`, `useShoppingStore.applySortedOrder`.
 
 ### Project structure
 ```
 src/
-  components/      # Reusable UI primitives
+  components/      # UI primitives
   contexts/        # Auth provider
-  lib/             # Supabase + AI clients
+  lib/             # Supabase + layout sort helpers
   navigation/      # Stack configuration
-  screens/         # Auth + list experiences
-  store/           # Zustand-powered cache/hooks
+  screens/         # Auth, lists, layouts, templates
+  store/           # Zustand stores for lists/layouts
   types/           # Shared TS types
+supabase/
+  functions/       # Edge functions (sort-by-layout)
 ```
 
 ### Development tips
-- `useShoppingStore` handles all Supabase CRUD; extend it when new list/item behaviors are required.
-- The `AppNavigator` automatically swaps between auth flow and the main app based on the Supabase session.
-- `app.config.ts` loads `.env` variables and exposes them to the runtime via `extra`.
+- `useShoppingStore` handles list/item CRUD; `useShopLayouts` handles layouts/templates.
+- `AppNavigator` switches between auth and app stacks based on Supabase session.
+- Keep shop names consistent (matching in templates and lists) for best template matching.
 
 ### Testing checklist
-- [ ] Create a new user via the Sign Up screen and confirm profile insertion.
-- [ ] Add multiple lists/items and relaunch Expo to ensure the session persists.
-- [ ] Trigger AI suggestions with and without configured credentials.
-- [ ] Verify RLS rules in Supabase by querying tables as another user.
+- [ ] Sign up/sign in; confirm profile row creation.
+- [ ] Create lists with/without shop names; add/delete items.
+- [ ] Edit layouts; apply a template; navigate away/back to confirm it persists without duplication.
+- [ ] Manage templates via Templates screen; apply them in a list.
+- [ ] Run layout sorting with configured AI keys and verify items reorder. 

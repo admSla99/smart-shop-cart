@@ -6,6 +6,7 @@ import { palette } from '../theme/colors';
 type ItemRowProps = {
   name: string;
   quantity?: number | null;
+  areaName?: string | null;
   isChecked: boolean;
   onToggle: () => void;
   onDelete?: () => void;
@@ -22,7 +23,7 @@ const checkboxStyle = (checked: boolean): ViewStyle => ({
   marginRight: 12,
 });
 
-export const ItemRow: React.FC<ItemRowProps> = ({ name, quantity, isChecked, onToggle, onDelete }) => (
+export const ItemRow: React.FC<ItemRowProps> = ({ name, quantity, areaName, isChecked, onToggle, onDelete }) => (
   <View style={styles.row}>
     <Pressable style={checkboxStyle(isChecked)} onPress={onToggle}>
       {isChecked ? <Text style={styles.checkmark}>✓</Text> : null}
@@ -32,6 +33,7 @@ export const ItemRow: React.FC<ItemRowProps> = ({ name, quantity, isChecked, onT
       {quantity !== null && quantity !== undefined ? (
         <Text style={styles.quantity}>{quantity}</Text>
       ) : null}
+      {areaName ? <Text style={styles.area}>{areaName}</Text> : null}
     </View>
     {onDelete ? (
       <Pressable onPress={onDelete} style={styles.delete}>
@@ -68,6 +70,11 @@ const styles = StyleSheet.create({
   quantity: {
     color: palette.muted,
     marginTop: 2,
+  },
+  area: {
+    color: palette.muted,
+    marginTop: 2,
+    fontSize: 12,
   },
   delete: {
     paddingHorizontal: 8,
