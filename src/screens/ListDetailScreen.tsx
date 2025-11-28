@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   View,
+  Platform,
 } from 'react-native';
 
 import { Button } from '../components/Button';
@@ -51,6 +52,7 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
+  const [templateMessage, setTemplateMessage] = useState<string | null>(null);
 
   const loading = loadingItems[listId];
 
@@ -121,6 +123,63 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
 
   const handleDelete = (itemId: string) => {
     deleteItem(listId, itemId).catch((err) => setError(err.message));
+  };
+
+  const confirmApplyTemplate = () => {
+    if (!selectedTemplate) return;
+    const message = `Replace your layout with "${selectedTemplate}"?`;
+    const apply = () => applyTemplate(selectedTemplate);
+
+    if (Platform.OS === 'web') {
+      const confirmFn =
+        typeof globalThis !== 'undefined' && typeof (globalThis as { confirm?: (msg?: string) => boolean }).confirm === 'function'
+          ? (globalThis as { confirm: (msg?: string) => boolean }).confirm
+          : undefined;
+      if (!confirmFn || confirmFn(message)) {
+        apply();
+      }
+      return;
+    }
+
+    Alert.alert('Apply template', message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Apply', style: 'destructive', onPress: apply },
+    ]);
+  };
+
+  const applyTemplate = async (templateName: string) => {
+    if (!user?.id) return;
+    const areas = templates
+      .filter((t) => (t.template_name ?? 'Default') === templateName)
+      .sort((a, b) => a.sequence - b.sequence);
+    if (!areas.length) {
+      setTemplateMessage('No areas found for this template.');
+      return;
+    }
+    setTemplateMessage(null);
+    setLayoutLoading(true);
+    try {
+      const nextAreas = areas.map((t, idx) => ({
+        id: `${t.id}-${idx}`,
+        user_id: user.id,
+        shop_name: shopName ?? 'Generic',
+        area_name: t.area_name,
+        sequence: idx + 1,
+      }));
+      setLayoutAreas(nextAreas);
+      const saved = await saveLayout(
+        user.id,
+        shopName ?? 'Generic',
+        nextAreas.map((a) => a.area_name),
+      );
+      setLayoutAreas(saved.map((a, idx) => ({ ...a, sequence: idx + 1 })));
+      setTemplateMessage(`Applied "${templateName}" with ${nextAreas.length} areas.`);
+    } catch (err) {
+      setLayoutError((err as Error)?.message ?? 'Unable to apply template');
+    } finally {
+      setLayoutLoading(false);
+    }
+    return;
   };
 
   const ensureLayout = useCallback(async () => {
@@ -264,13 +323,16 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
                   <View style={styles.templateList}>
                     {[...new Set(templates.map((t) => t.template_name))].map((name) => {
                       const isSelected = selectedTemplate === name;
+                      const count = templates.filter((t) => t.template_name === name).length;
                       return (
                         <Pressable
                           key={name}
                           style={[styles.templateChip, isSelected && styles.templateChipSelected]}
                           onPress={() => setSelectedTemplate(name)}
                         >
-                          <Text style={styles.templateChipLabel}>{name}</Text>
+                          <Text style={styles.templateChipLabel}>
+                            {name} ({count})
+                          </Text>
                         </Pressable>
                       );
                     })}
@@ -278,42 +340,17 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
                   <Text style={styles.templateHint}>
                     {selectedTemplate
                       ? `Selected: ${selectedTemplate}`
-                      : 'Choose a template to preview.'}
+                      : templates.length === 0
+                        ? 'No templates available for this shop.'
+                        : 'Choose a template to preview.'}
                   </Text>
                   <Button
                     label="Apply template"
                     variant="secondary"
-                    disabled={!selectedTemplate || templates.length === 0}
-                    onPress={() => {
-                      if (!user?.id || !selectedTemplate) return;
-                      const areas = templates
-                        .filter((t) => t.template_name === selectedTemplate)
-                        .sort((a, b) => a.sequence - b.sequence);
-                      if (!areas.length) return;
-                      Alert.alert(
-                        'Apply template',
-                        `Replace your layout with "${selectedTemplate}"?`,
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Apply',
-                            style: 'destructive',
-                            onPress: () => {
-                              setLayoutAreas(
-                                areas.map((t, idx) => ({
-                                  id: `${t.id}-${idx}`,
-                                  user_id: user.id,
-                                  shop_name: shopName ?? 'Generic',
-                                  area_name: t.area_name,
-                                  sequence: idx + 1,
-                                })),
-                              );
-                            },
-                          },
-                        ],
-                      );
-                    }}
+                    disabled={!selectedTemplate || templates.length === 0 || layoutLoading}
+                    onPress={confirmApplyTemplate}
                   />
+                  {templateMessage ? <Text style={styles.templateHint}>{templateMessage}</Text> : null}
                 </View>
               ) : null}
               {layoutAreas.map((area, index) => (
@@ -396,7 +433,11 @@ const ListDetailScreen: React.FC<Props> = ({ route }) => {
                   setLayoutLoading(true);
                   setLayoutError(null);
                   try {
-                    const updated = await saveLayout(user.id, shopName, layoutAreas.map((a) => a.area_name));
+                    const updated = await saveLayout(
+                      user.id,
+                      shopName ?? 'Generic',
+                      layoutAreas.map((a) => a.area_name),
+                    );
                     setLayoutAreas(updated.map((area, idx) => ({ ...area, sequence: idx + 1 })));
                   } catch (err) {
                     setLayoutError((err as Error)?.message ?? 'Unable to save layout');

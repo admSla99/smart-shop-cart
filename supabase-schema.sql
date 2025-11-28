@@ -97,3 +97,9 @@ create policy "Templates readable by everyone"
 on public.shop_layout_templates
 for select
 using (true);
+
+create policy "Templates manageable by authenticated users"
+on public.shop_layout_templates
+for all
+using (auth.role() = 'authenticated')
+with check (auth.role() = 'authenticated');

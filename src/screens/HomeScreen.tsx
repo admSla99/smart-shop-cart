@@ -124,6 +124,11 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             variant="secondary"
             onPress={() => setShowNewListForm((prev) => !prev)}
           />
+          <Button
+            label="Templates"
+            variant="secondary"
+            onPress={() => navigation.navigate('Templates')}
+          />
           <Text style={styles.signOut} onPress={signOut}>
             Sign out
           </Text>
