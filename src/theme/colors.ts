@@ -1,16 +1,31 @@
 export const palette = {
-  background: '#030712',
-  surface: '#0F172A',
-  card: '#111827',
-  elevated: '#1F2937',
-  primary: '#6366F1',
-  primaryDark: '#4F46E5',
-  accent: '#22D3EE',
-  text: '#F9FAFB',
-  muted: '#94A3B8',
-  border: '#1E293B',
-  danger: '#F87171',
-  success: '#34D399',
+  background: '#F6F3EF',
+  surface: '#FFFFFF',
+  card: '#FDF8F3',
+  elevated: '#F1E8E0',
+
+  primary: '#FF6B4A',
+  primaryGlow: 'rgba(255, 107, 74, 0.32)',
+  secondary: '#2EC4B6',
+  secondaryGlow: 'rgba(46, 196, 182, 0.28)',
+  accent: '#FFC857',
+  accentGlow: 'rgba(255, 200, 87, 0.35)',
+
+  text: '#1E1B16',
+  textSecondary: '#5F564C',
+  textTertiary: '#8B8075',
+  muted: '#7A6F64',
+
+  border: '#E8DED4',
+  borderHighlight: '#D6C8BC',
+
+  danger: '#E5484D',
+  success: '#2BB673',
+  warning: '#F59E0B',
+
+  gradientPrimary: ['#FF6B4A', '#FFA585'],
+  gradientSecondary: ['#2EC4B6', '#7FE8DB'],
+  gradientAccent: ['#FFC857', '#FFE3A2'],
 };
 
 export const shopBrandColors = {
@@ -20,14 +35,14 @@ export const shopBrandColors = {
 };
 
 export const shopColors = [
-  shopBrandColors.lidl, // Lidl blue
-  shopBrandColors.kaufland, // Kaufland red
-  shopBrandColors.coop, // Coop-Jednota orange
-  '#4ADE80', // green
-  '#38BDF8', // sky
-  '#A78BFA', // violet
-  '#F472B6', // pink
-  '#FCD34D', // yellow
+  shopBrandColors.lidl,
+  shopBrandColors.kaufland,
+  shopBrandColors.coop,
+  '#22C55E', // Green
+  '#06B6D4', // Cyan
+  '#8B5CF6', // Violet
+  '#EC4899', // Pink
+  '#F59E0B', // Amber
 ];
 
 export const getReadableTextColor = (hex: string) => {
@@ -36,5 +51,5 @@ export const getReadableTextColor = (hex: string) => {
   const g = parseInt(sanitized.substring(2, 4), 16);
   const b = parseInt(sanitized.substring(4, 6), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? '#111827' : '#F9FAFB';
+  return luminance > 0.65 ? '#1E1B16' : '#FFFFFF';
 };

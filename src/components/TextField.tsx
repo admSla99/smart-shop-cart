@@ -1,49 +1,94 @@
-import React from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TextInputProps,
+  View,
+  ViewStyle,
+} from 'react-native';
 
 import { palette } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { layout } from '../theme/layout';
 
 type TextFieldProps = TextInputProps & {
-  label: string;
-  errorMessage?: string;
+  label?: string;
+  error?: string;
+  containerStyle?: ViewStyle;
 };
 
-export const TextField: React.FC<TextFieldProps> = ({ label, errorMessage, style, ...props }) => (
-  <View style={styles.wrapper}>
-    <Text style={styles.label}>{label}</Text>
-    <TextInput
-      {...props}
-      style={[styles.input, style]}
-      placeholderTextColor={palette.muted}
-    />
-    {Boolean(errorMessage) && <Text style={styles.error}>{errorMessage}</Text>}
-  </View>
-);
+export const TextField: React.FC<TextFieldProps> = ({
+  label,
+  error,
+  containerStyle,
+  style,
+  ...props
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <View style={[styles.container, containerStyle]}>
+      {label && <Text style={styles.label}>{label}</Text>}
+      <View
+        style={[
+          styles.inputContainer,
+          isFocused && styles.focused,
+          !!error && styles.errorBorder,
+        ]}
+      >
+        <TextInput
+          style={[styles.input, style]}
+          placeholderTextColor={palette.textTertiary}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          {...props}
+        />
+      </View>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-  wrapper: {
+  container: {
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    color: palette.text,
-    marginBottom: 6,
-    fontWeight: '600',
+    ...typography.label,
+    color: palette.textSecondary,
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  input: {
+  inputContainer: {
+    backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: layout.borderRadius.m,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
-    color: palette.text,
-    backgroundColor: palette.card,
+    ...layout.shadows.small,
   },
-  error: {
+  focused: {
+    borderColor: palette.primary,
+    backgroundColor: palette.card,
+    shadowColor: palette.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+  },
+  errorBorder: {
+    borderColor: palette.danger,
+  },
+  input: {
+    ...typography.body,
+    color: palette.text,
+    padding: 0, // Reset default padding
+  },
+  errorText: {
+    ...typography.caption,
     color: palette.danger,
     marginTop: 4,
-    fontSize: 13,
+    marginLeft: 4,
   },
 });
 

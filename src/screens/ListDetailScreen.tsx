@@ -1,586 +1,643 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   ActivityIndicator,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
-  Platform,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
+import { DecorativeBackground } from '../components/DecorativeBackground';
 import { EmptyState } from '../components/EmptyState';
+import { FadeInView } from '../components/FadeInView';
 import { ItemRow } from '../components/ItemRow';
-import type { AppStackParamList } from '../navigation/AppNavigator';
-import { sortByLayout } from '../lib/layoutSorting';
-import { useShopLayouts } from '../store/useShopLayouts';
+import { TextField } from '../components/TextField';
 import { useAuth } from '../contexts/AuthContext';
-import type { ShopLayoutArea, ShopLayoutTemplate } from '../types';
+import type { AppStackParamList } from '../navigation/AppNavigator';
 import { useShoppingStore } from '../store/useShoppingLists';
-import { getReadableTextColor, palette } from '../theme/colors';
+import { useShopLayouts } from '../store/useShopLayouts';
+import { sortByLayout } from '../lib/layoutSorting';
+import type { ShopLayoutArea } from '../types';
+import { palette } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { layout } from '../theme/layout';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ListDetail'>;
 
-const ListDetailScreen: React.FC<Props> = ({ route }) => {
+const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
+  const insets = useSafeAreaInsets();
   const { listId, title, shopName, shopColor } = route.params;
   const { user } = useAuth();
-  const { fetchLayout, saveLayout } = useShopLayouts();
   const {
     items,
-    loadingItems,
     fetchItems,
     addItem,
     toggleItem,
     deleteItem,
+    loadingItems,
     applySortedOrder,
   } = useShoppingStore();
-  const listItems = items[listId] ?? [];
-  const [name, setName] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [sorting, setSorting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { fetchLayout, saveLayout } = useShopLayouts();
+
+  const [newItemName, setNewItemName] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [showLayoutConfig, setShowLayoutConfig] = useState(false);
   const [layoutAreas, setLayoutAreas] = useState<ShopLayoutArea[]>([]);
-  const [templates, setTemplates] = useState<ShopLayoutTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
-  const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
   const [newAreaName, setNewAreaName] = useState('');
-  const [templateMessage, setTemplateMessage] = useState<string | null>(null);
+  const [sorting, setSorting] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [inputHeight, setInputHeight] = useState(0);
 
-  const loading = loadingItems[listId];
+  const keyboardInset = Platform.OS === 'android' ? keyboardHeight : 0;
+  const listPaddingBottom = insets.bottom + 24 + inputHeight + keyboardInset;
+  const listFooterHeight = Math.max(listPaddingBottom, inputHeight + 32);
 
-  const load = useCallback(() => {
+  useEffect(() => {
     fetchItems(listId);
   }, [fetchItems, listId]);
 
   useEffect(() => {
-    load();
-  }, [load]);
-
-  const loadLayout = useCallback(async () => {
-    if (!user?.id) return;
-    setLayoutLoading(true);
-    setLayoutError(null);
-    try {
-      const layout = await fetchLayout(user.id, shopName ?? 'Generic');
-      setLayoutAreas(layout);
-    } catch (err) {
-      setLayoutError((err as Error)?.message ?? 'Unable to load layout');
-    } finally {
-      setLayoutLoading(false);
-    }
-  }, [fetchLayout, shopName, user?.id]);
-
-  const loadTemplates = useCallback(async () => {
-    if (!shopName) return;
-    try {
-      const data = await useShopLayouts.getState().fetchTemplates(shopName);
-      setTemplates(data);
-      if (data.length && !selectedTemplate) {
-        setSelectedTemplate(data[0].template_name);
-      }
-    } catch (err) {
-      setLayoutError((err as Error)?.message ?? 'Unable to load templates');
-    }
-  }, [shopName, selectedTemplate]);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
-    if (layoutEditorOpen) {
-      loadLayout();
-      loadTemplates();
+    if (user?.id && shopName) {
+      fetchLayout(user.id, shopName).then(setLayoutAreas).catch(console.error);
     }
-  }, [layoutEditorOpen, loadLayout, loadTemplates]);
+  }, [fetchLayout, user?.id, shopName]);
 
-  const handleAdd = async () => {
-    setSubmitting(true);
-    setError(null);
+  const handleAddItem = async () => {
+    if (!newItemName.trim()) {
+      return;
+    }
+    setAdding(true);
     try {
-      const parsedQuantity = quantity.trim() ? parseInt(quantity.trim(), 10) : undefined;
-      if (quantity.trim() && (Number.isNaN(parsedQuantity) || parsedQuantity === undefined)) {
-        throw new Error('Quantity must be a whole number');
-      }
-
-      await addItem(listId, { name, quantity: parsedQuantity });
-      setName('');
-      setQuantity('');
-    } catch (err) {
-      setError((err as Error)?.message ?? 'Unable to add item');
+      await addItem(listId, { name: newItemName.trim() });
+      setNewItemName('');
+    } catch (error) {
+      console.error('Failed to add item:', error);
     } finally {
-      setSubmitting(false);
+      setAdding(false);
     }
   };
 
-  const handleToggle = (itemId: string, current: boolean) => {
-    toggleItem(listId, itemId, !current).catch((err) => setError(err.message));
-  };
-
-  const handleDelete = (itemId: string) => {
-    deleteItem(listId, itemId).catch((err) => setError(err.message));
-  };
-
-  const confirmApplyTemplate = () => {
-    if (!selectedTemplate) return;
-    const message = `Replace your layout with "${selectedTemplate}"?`;
-    const apply = () => applyTemplate(selectedTemplate);
-
-    if (Platform.OS === 'web') {
-      const confirmFn =
-        typeof globalThis !== 'undefined' && typeof (globalThis as { confirm?: (msg?: string) => boolean }).confirm === 'function'
-          ? (globalThis as { confirm: (msg?: string) => boolean }).confirm
-          : undefined;
-      if (!confirmFn || confirmFn(message)) {
-        apply();
-      }
-      return;
-    }
-
-    Alert.alert('Apply template', message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Apply', style: 'destructive', onPress: apply },
-    ]);
-  };
-
-  const applyTemplate = async (templateName: string) => {
-    if (!user?.id) return;
-    const areas = templates
-      .filter((t) => (t.template_name ?? 'Default') === templateName)
-      .sort((a, b) => a.sequence - b.sequence);
-    if (!areas.length) {
-      setTemplateMessage('No areas found for this template.');
-      return;
-    }
-    setTemplateMessage(null);
-    setLayoutLoading(true);
-    try {
-      const nextAreas = areas.map((t, idx) => ({
-        id: `${t.id}-${idx}`,
-        user_id: user.id,
-        shop_name: shopName ?? 'Generic',
-        area_name: t.area_name,
-        sequence: idx + 1,
-      }));
-      setLayoutAreas(nextAreas);
-      const saved = await saveLayout(
-        user.id,
-        shopName ?? 'Generic',
-        nextAreas.map((a) => a.area_name),
-      );
-      setLayoutAreas(saved.map((a, idx) => ({ ...a, sequence: idx + 1 })));
-      setTemplateMessage(`Applied "${templateName}" with ${nextAreas.length} areas.`);
-    } catch (err) {
-      setLayoutError((err as Error)?.message ?? 'Unable to apply template');
-    } finally {
-      setLayoutLoading(false);
-    }
-    return;
-  };
-
-  const ensureLayout = useCallback(async () => {
-    if (!user?.id) return [];
-    try {
-      const layout = await fetchLayout(user.id, shopName ?? 'Generic');
-      return layout;
-    } catch (err) {
-      setError((err as Error)?.message ?? 'Unable to load layout');
-      return [];
-    }
-  }, [fetchLayout, shopName, user?.id]);
-
-  const handleSortByLayout = async () => {
-    if (!user?.id) {
-      setError('You must be signed in to sort.');
-      return;
-    }
+  const handleAutoSort = async () => {
+    if (items[listId]?.length === 0) return;
     setSorting(true);
-    setError(null);
     try {
-      const layout = await ensureLayout();
       const sorted = await sortByLayout({
-        shopName: shopName ?? 'Generic',
-        items: listItems.map((item) => ({ id: item.id, name: item.name, quantity: item.quantity })),
-        layout,
+        shopName,
+        items: items[listId] || [],
+        layout: layoutAreas,
       });
       await applySortedOrder(listId, sorted);
-    } catch (err) {
-      setError((err as Error)?.message ?? 'Unable to sort items');
+    } catch (error) {
+      console.error('Failed to auto-sort:', error);
+      // Ideally show a toast or alert here
     } finally {
       setSorting(false);
     }
   };
 
+  const toggleLayoutConfig = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowLayoutConfig((prev) => !prev);
+  };
+
+  const handleSaveLayout = async () => {
+    if (!user?.id) return;
+    setLayoutLoading(true);
+    setLayoutError(null);
+    try {
+      const updated = await saveLayout(
+        user.id,
+        shopName ?? 'Generic',
+        layoutAreas.map((a) => a.area_name),
+      );
+      setLayoutAreas(updated);
+
+      // Apply new sort order to existing items
+      const sorted = items[listId]?.map(item => {
+        const area = updated.find(a => a.area_name.toLowerCase() === (item.area_name || '').toLowerCase());
+        return {
+          id: item.id,
+          area_name: area?.area_name ?? null,
+          order_index: area?.sequence ?? null
+        };
+      }) ?? [];
+
+      if (sorted.length > 0) {
+        await applySortedOrder(listId, sorted);
+      }
+
+      toggleLayoutConfig();
+    } catch (err) {
+      setLayoutError((err as Error)?.message ?? 'Unable to save layout');
+    } finally {
+      setLayoutLoading(false);
+    }
+  };
+
+  const listItems = items[listId] || [];
+  const sortedItems = [...listItems].sort((a, b) => {
+    if (a.is_checked === b.is_checked) {
+      // Sort by area sequence first if available
+      const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+      }
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    }
+    return a.is_checked ? 1 : -1;
+  });
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      {shopName ? (
-        <View
-          style={[
-            styles.infoBanner,
-            shopColor ? { backgroundColor: shopColor } : styles.defaultBanner,
-          ]}
+    <View style={styles.container}>
+      <DecorativeBackground variant="cool" />
+      <FadeInView style={styles.header}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          hitSlop={10}
         >
-          <Text
-            style={[
-              styles.infoLabel,
-              shopColor ? { color: getReadableTextColor(shopColor) } : undefined,
-            ]}
-          >
-            Shop
+          <Feather name="arrow-left" size={24} color={palette.text} />
+        </Pressable>
+        <View style={styles.headerContent}>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
           </Text>
-          <Text
-            style={[
-              styles.infoValue,
-              shopColor ? { color: getReadableTextColor(shopColor) } : undefined,
-            ]}
-          >
-            {shopName}
-          </Text>
-        </View>
-      ) : null}
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Add new item</Text>
-        <TextInput
-          placeholder="Item name"
-          placeholderTextColor={palette.muted}
-          value={name}
-          onChangeText={setName}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Quantity (number)"
-          placeholderTextColor={palette.muted}
-          value={quantity}
-          onChangeText={(text) => setQuantity(text.replace(/[^0-9]/g, ''))}
-          style={styles.input}
-          keyboardType="numeric"
-        />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button label="Add item" onPress={handleAdd} loading={submitting} />
-      </View>
-
-      <Text style={styles.sectionTitle}>Items</Text>
-      {listItems.length > 0 ? (
-        <View style={{ marginBottom: 12 }}>
-          <Button
-            label="Sort by shop layout"
-            onPress={handleSortByLayout}
-            loading={sorting}
-            variant="secondary"
-          />
-        </View>
-      ) : null}
-      {loading ? (
-        <ActivityIndicator style={{ marginVertical: 20 }} color={palette.accent} />
-      ) : (
-        <FlatList
-          data={listItems}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ItemRow
-              name={item.name}
-              quantity={item.quantity}
-              areaName={item.area_name}
-              isChecked={item.is_checked}
-              onToggle={() => handleToggle(item.id, item.is_checked)}
-              onDelete={() => handleDelete(item.id)}
-            />
+          {shopName && (
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: shopColor ? `${shopColor}20` : palette.elevated },
+              ]}
+            >
+              <View
+                style={[
+                  styles.badgeDot,
+                  { backgroundColor: shopColor || palette.textSecondary },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: shopColor || palette.textSecondary },
+                ]}
+              >
+                {shopName}
+              </Text>
+            </View>
           )}
-          scrollEnabled={false}
-          ListEmptyComponent={
-            <EmptyState
-              title="No items yet"
-              description="Add your first item to get started."
+        </View>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={handleAutoSort}
+            style={[styles.headerAction, sorting && styles.headerActionActive]}
+            disabled={sorting}
+          >
+            {sorting ? (
+              <ActivityIndicator size="small" color={palette.accent} />
+            ) : (
+              <Feather name="zap" size={16} color={palette.accent} />
+            )}
+            <Text style={[styles.headerActionText, sorting && styles.headerActionTextActive]}>
+              {sorting ? 'AI Sorting' : 'AI Sort'}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={toggleLayoutConfig}
+            style={[styles.headerAction, showLayoutConfig && styles.headerActionActive]}
+          >
+            <Feather
+              name="layers"
+              size={16}
+              color={showLayoutConfig ? palette.primary : palette.textSecondary}
             />
-          }
-        />
-      )}
+            <Text
+              style={[
+                styles.headerActionText,
+                showLayoutConfig && styles.headerActionTextActive,
+              ]}
+            >
+              Layout
+            </Text>
+          </Pressable>
+        </View>
+      </FadeInView>
 
-      {shopName ? (
-        <View style={styles.layoutCard}>
-          <View style={styles.layoutHeader}>
-            <Text style={styles.sectionTitle}>Shop layout</Text>
-            <Button
-              label={layoutEditorOpen ? 'Close' : 'Edit layout'}
-              variant="ghost"
-              onPress={() => setLayoutEditorOpen((prev) => !prev)}
-            />
-          </View>
-          {layoutEditorOpen ? (
-            <>
-              {layoutLoading ? (
-                <ActivityIndicator style={{ marginVertical: 12 }} color={palette.accent} />
-              ) : null}
-              {layoutError ? <Text style={styles.error}>{layoutError}</Text> : null}
-              {templates.length > 0 ? (
-                <View style={styles.templateRow}>
-                  <Text style={styles.sectionSubtitle}>Templates available for this shop</Text>
-                  <View style={styles.templateList}>
-                    {[...new Set(templates.map((t) => t.template_name))].map((name) => {
-                      const isSelected = selectedTemplate === name;
-                      const count = templates.filter((t) => t.template_name === name).length;
-                      return (
-                        <Pressable
-                          key={name}
-                          style={[styles.templateChip, isSelected && styles.templateChipSelected]}
-                          onPress={() => setSelectedTemplate(name)}
-                        >
-                          <Text style={styles.templateChipLabel}>
-                            {name} ({count})
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  <Text style={styles.templateHint}>
-                    {selectedTemplate
-                      ? `Selected: ${selectedTemplate}`
-                      : templates.length === 0
-                        ? 'No templates available for this shop.'
-                        : 'Choose a template to preview.'}
-                  </Text>
-                  <Button
-                    label="Apply template"
-                    variant="secondary"
-                    disabled={!selectedTemplate || templates.length === 0 || layoutLoading}
-                    onPress={confirmApplyTemplate}
-                  />
-                  {templateMessage ? <Text style={styles.templateHint}>{templateMessage}</Text> : null}
-                </View>
-              ) : null}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardContainer}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 20 : 0}
+      >
+        {showLayoutConfig ? (
+          <ScrollView
+            style={styles.configContainer}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 24 + keyboardInset }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            <FadeInView style={styles.configCard}>
+              <Text style={styles.configTitle}>Shop Layout</Text>
+              <Text style={styles.configSubtitle}>
+                Order areas to match your path through the store.
+              </Text>
+
               {layoutAreas.map((area, index) => (
-                <View key={`${area.id}-${index}`} style={styles.areaRow}>
+                <View key={area.id} style={styles.areaRow}>
                   <Text style={styles.areaName}>
                     {index + 1}. {area.area_name}
                   </Text>
                   <View style={styles.areaActions}>
-                    <Button
-                      label="↑"
-                      variant="ghost"
+                    <Pressable
                       onPress={() => {
                         if (index === 0) return;
-                        setLayoutAreas((prev) => {
-                          const copy = [...prev];
-                          [copy[index - 1], copy[index]] = [copy[index], copy[index - 1]];
-                          return copy.map((a, idx) => ({ ...a, sequence: idx + 1 }));
-                        });
+                        const newAreas = [...layoutAreas];
+                        [newAreas[index - 1], newAreas[index]] = [newAreas[index], newAreas[index - 1]];
+                        setLayoutAreas(newAreas.map((a, i) => ({ ...a, sequence: i + 1 })));
                       }}
-                    />
-                    <Button
-                      label="↓"
-                      variant="ghost"
+                      disabled={index === 0}
+                      style={[styles.actionButton, index === 0 && styles.actionButtonDisabled]}
+                    >
+                      <Feather name="arrow-up" size={16} color={palette.text} />
+                    </Pressable>
+                    <Pressable
                       onPress={() => {
-                        setLayoutAreas((prev) => {
-                          if (index === prev.length - 1) return prev;
-                          const copy = [...prev];
-                          [copy[index + 1], copy[index]] = [copy[index], copy[index + 1]];
-                          return copy.map((a, idx) => ({ ...a, sequence: idx + 1 }));
-                        });
+                        if (index === layoutAreas.length - 1) return;
+                        const newAreas = [...layoutAreas];
+                        [newAreas[index + 1], newAreas[index]] = [newAreas[index], newAreas[index + 1]];
+                        setLayoutAreas(newAreas.map((a, i) => ({ ...a, sequence: i + 1 })));
                       }}
-                    />
-                    <Button
-                      label="Remove"
-                      variant="ghost"
-                      onPress={() =>
-                        setLayoutAreas((prev) =>
-                          prev.filter((_, idx) => idx !== index).map((a, idx) => ({
-                            ...a,
-                            sequence: idx + 1,
-                          })),
-                        )
-                      }
-                    />
+                      disabled={index === layoutAreas.length - 1}
+                      style={[styles.actionButton, index === layoutAreas.length - 1 && styles.actionButtonDisabled]}
+                    >
+                      <Feather name="arrow-down" size={16} color={palette.text} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        const newAreas = layoutAreas.filter((_, i) => i !== index);
+                        setLayoutAreas(newAreas.map((a, i) => ({ ...a, sequence: i + 1 })));
+                      }}
+                      style={[styles.actionButton, styles.deleteButton]}
+                    >
+                      <Feather name="trash-2" size={16} color={palette.danger} />
+                    </Pressable>
                   </View>
                 </View>
               ))}
-              <View style={styles.newAreaRow}>
+
+              <View style={styles.addAreaRow}>
                 <TextInput
-                  placeholder="Add area name"
-                  placeholderTextColor={palette.muted}
                   value={newAreaName}
                   onChangeText={setNewAreaName}
-                  style={styles.input}
-                />
-                <Button
-                  label="Add"
-                  variant="secondary"
-                  onPress={() => {
-                    const trimmed = newAreaName.trim();
-                    if (!trimmed) return;
-                    setLayoutAreas((prev) => [
-                      ...prev,
+                  placeholder="Add new area..."
+                  placeholderTextColor={palette.muted}
+                  style={styles.addAreaInput}
+                  onSubmitEditing={() => {
+                    if (!newAreaName.trim()) return;
+                    setLayoutAreas([
+                      ...layoutAreas,
                       {
-                        id: `${trimmed}-${Date.now()}`,
-                        user_id: user!.id,
-                        shop_name: shopName,
-                        area_name: trimmed,
-                        sequence: prev.length + 1,
+                        id: `temp-${Date.now()}`,
+                        user_id: user?.id ?? '',
+                        shop_name: shopName ?? '',
+                        area_name: newAreaName.trim(),
+                        sequence: layoutAreas.length + 1,
+                        created_at: new Date().toISOString(),
                       },
                     ]);
                     setNewAreaName('');
                   }}
                 />
+                <Pressable
+                  onPress={() => {
+                    if (!newAreaName.trim()) return;
+                    setLayoutAreas([
+                      ...layoutAreas,
+                      {
+                        id: `temp-${Date.now()}`,
+                        user_id: user?.id ?? '',
+                        shop_name: shopName ?? '',
+                        area_name: newAreaName.trim(),
+                        sequence: layoutAreas.length + 1,
+                        created_at: new Date().toISOString(),
+                      },
+                    ]);
+                    setNewAreaName('');
+                  }}
+                  style={styles.addAreaButton}
+                >
+                  <Feather name="plus" size={20} color={palette.text} />
+                </Pressable>
               </View>
+
+              {layoutError && <Text style={styles.error}>{layoutError}</Text>}
+
               <Button
-                label="Save layout"
-                onPress={async () => {
-                  if (!user?.id) return;
-                  setLayoutLoading(true);
-                  setLayoutError(null);
-                  try {
-                    const updated = await saveLayout(
-                      user.id,
-                      shopName ?? 'Generic',
-                      layoutAreas.map((a) => a.area_name),
-                    );
-                    setLayoutAreas(updated.map((area, idx) => ({ ...area, sequence: idx + 1 })));
-                  } catch (err) {
-                    setLayoutError((err as Error)?.message ?? 'Unable to save layout');
-                  } finally {
-                    setLayoutLoading(false);
-                  }
-                }}
+                label="Save Layout"
+                onPress={handleSaveLayout}
                 loading={layoutLoading}
+                style={{ marginTop: 16 }}
               />
-            </>
-          ) : (
-            <Text style={styles.sectionSubtitle}>
-              Configure the ordered areas for this shop to get the best sorting.
-            </Text>
-          )}
-        </View>
-      ) : null}
-    </ScrollView>
+            </FadeInView>
+          </ScrollView>
+        ) : (
+          <>
+            <FadeInView style={styles.content}>
+              {loadingItems && listItems.length === 0 ? (
+                <ActivityIndicator color={palette.primary} style={{ marginTop: 40 }} />
+              ) : (
+                <FlatList
+                  data={sortedItems}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <ItemRow
+                      label={item.name}
+                      isCompleted={item.is_checked}
+                      onToggle={() => toggleItem(listId, item.id, !item.is_checked)}
+                      onDelete={() => deleteItem(listId, item.id)}
+                    />
+                  )}
+                  contentContainerStyle={styles.listContent}
+                  ListEmptyComponent={
+                    <EmptyState
+                      title="Empty list"
+                      description="Add items to start shopping."
+                    />
+                  }
+                  ListFooterComponent={<View style={{ height: listFooterHeight }} />}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                />
+              )}
+            </FadeInView>
+
+            <FadeInView
+              delay={120}
+              style={[styles.inputContainer, { bottom: insets.bottom + 16 + keyboardInset }]}
+              onLayout={({ nativeEvent }) => {
+                const nextHeight = Math.round(nativeEvent.layout.height);
+                setInputHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+              }}
+            >
+              <TextField
+                value={newItemName}
+                onChangeText={setNewItemName}
+                placeholder="Add item..."
+                onSubmitEditing={handleAddItem}
+                returnKeyType="done"
+                containerStyle={{ flex: 1, marginBottom: 0 }}
+              />
+              <Button
+                icon="plus"
+                iconOnly
+                accessibilityLabel="Add item"
+                onPress={handleAddItem}
+                loading={adding}
+                disabled={!newItemName.trim()}
+                style={styles.addButton}
+              />
+            </FadeInView>
+          </>
+        )}
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: palette.background,
+    paddingTop: 32,
+    position: 'relative',
   },
-  card: {
-    backgroundColor: palette.surface,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: palette.text,
-    marginBottom: 12,
-  },
-  sectionSubtitle: {
-    color: palette.muted,
-    marginTop: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: palette.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: palette.text,
-    marginBottom: 12,
-    backgroundColor: palette.card,
-  },
-  error: {
-    color: palette.danger,
-    marginBottom: 8,
-  },
-  layoutCard: {
-    backgroundColor: palette.surface,
-    borderRadius: 18,
-    padding: 16,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  layoutHeader: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: palette.surface,
+    borderRadius: layout.borderRadius.xl,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...layout.shadows.small,
+    zIndex: 1,
+  },
+  keyboardContainer: {
+    flex: 1,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+    marginRight: 12,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginLeft: 8,
+  },
+  headerAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: layout.borderRadius.full,
+    backgroundColor: palette.card,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  headerActionActive: {
+    backgroundColor: 'rgba(255, 200, 87, 0.2)',
+    borderColor: 'rgba(255, 200, 87, 0.6)',
+  },
+  headerActionText: {
+    ...typography.caption,
+    color: palette.textSecondary,
+    fontWeight: '700',
+  },
+  headerActionTextActive: {
+    color: palette.primary,
+  },
+  title: {
+    ...typography.h2,
+    marginBottom: 4,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: layout.borderRadius.full,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  badgeText: {
+    ...typography.caption,
+    fontWeight: '700',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    zIndex: 1,
+  },
+  listContent: {
+    paddingBottom: 0,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    zIndex: 10,
+    elevation: 10,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: layout.borderRadius.xl,
+    gap: 12,
+    ...layout.shadows.medium,
+  },
+  addButton: {
+    marginBottom: 0,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  configContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    zIndex: 1,
+  },
+  configCard: {
+    backgroundColor: palette.surface,
+    borderRadius: layout.borderRadius.xl,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...layout.shadows.medium,
+  },
+  configTitle: {
+    ...typography.h3,
+    marginBottom: 8,
+  },
+  configSubtitle: {
+    ...typography.body,
+    color: palette.textSecondary,
+    marginBottom: 24,
   },
   areaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: palette.surface,
+    borderRadius: layout.borderRadius.l,
+    marginBottom: 8,
+    borderWidth: 1,
     borderColor: palette.border,
+    ...layout.shadows.small,
   },
   areaName: {
-    color: palette.text,
+    ...typography.body,
     fontWeight: '600',
-    flex: 1,
   },
   areaActions: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 8,
   },
-  newAreaRow: {
-    marginTop: 12,
-  },
-  templateRow: {
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  templateList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginVertical: 8,
-  },
-  templateChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
+  actionButton: {
+    padding: 8,
+    borderRadius: layout.borderRadius.m,
+    backgroundColor: palette.card,
     borderWidth: 1,
     borderColor: palette.border,
+  },
+  actionButtonDisabled: {
+    opacity: 0.3,
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(229, 72, 77, 0.12)',
+    borderColor: 'rgba(229, 72, 77, 0.3)',
+  },
+  addAreaRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  addAreaInput: {
+    flex: 1,
+    height: 48,
+    backgroundColor: palette.surface,
+    borderRadius: layout.borderRadius.l,
+    paddingHorizontal: 16,
+    color: palette.text,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...layout.shadows.small,
+  },
+  addAreaButton: {
+    width: 48,
+    height: 48,
+    borderRadius: layout.borderRadius.l,
     backgroundColor: palette.card,
-    marginRight: 8,
-    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: palette.border,
   },
-  templateChipSelected: {
-    borderColor: palette.primary,
-    backgroundColor: 'rgba(99,102,241,0.15)',
-  },
-  templateChipLabel: {
-    color: palette.text,
-    fontWeight: '600',
-  },
-  templateHint: {
-    color: palette.muted,
-    marginBottom: 8,
-  },
-  infoBanner: {
-    borderRadius: 14,
-    padding: 16,
+  error: {
+    ...typography.caption,
+    color: palette.danger,
     marginBottom: 16,
-  },
-  defaultBanner: {
-    backgroundColor: 'rgba(52, 211, 153, 0.1)',
-  },
-  infoLabel: {
-    fontSize: 13,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-    marginBottom: 4,
-    color: palette.text,
-  },
-  infoValue: {
-    color: palette.text,
-    fontSize: 16,
-    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

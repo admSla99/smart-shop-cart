@@ -24,17 +24,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
   },
   android: {
+    package: 'com.admsla99.smartshoppinglist',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
+    softwareKeyboardLayoutMode: 'resize',
   },
   web: {
     favicon: './assets/favicon.png',
   },
   extra: {
+    eas: {
+      projectId: '3f0eae8b-0ec0-4331-aa09-c05019fffbad',
+    },
     supabaseUrl:
       getEnv('EXPO_PUBLIC_SUPABASE_URL') ||
       getEnv('SUPABASE_URL'),

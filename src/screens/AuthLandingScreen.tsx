@@ -1,54 +1,134 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { Button } from '../components/Button';
+import { DecorativeBackground } from '../components/DecorativeBackground';
+import { FadeInView } from '../components/FadeInView';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
 import { palette } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { layout } from '../theme/layout';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'AuthLanding'>;
 
-const AuthLandingScreen: React.FC<Props> = ({ navigation }) => (
-  <View style={styles.container}>
-    <Text style={styles.badge}>Smart Shopping</Text>
-    <Text style={styles.title}>Groceries, organized. AI ready.</Text>
-    <Text style={styles.subtitle}>
-      Sign in to keep your shopping trips synced, categorized by store, and powered by intelligent suggestions.
-    </Text>
+const AuthLandingScreen: React.FC<Props> = ({ navigation }) => {
+  return (
+    <View style={styles.container}>
+      <DecorativeBackground variant="warm" />
+      <FadeInView style={styles.content}>
+        <LinearGradient
+          colors={palette.gradientPrimary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.iconContainer}
+        >
+          <Feather name="shopping-cart" size={40} color="#FFFFFF" />
+        </LinearGradient>
+        <Text style={styles.title}>Smart Shopping List</Text>
+        <Text style={styles.subtitle}>
+          Plan your runs, organize by shop, and never forget an item again.
+        </Text>
+        <View style={styles.chipRow}>
+          <View style={styles.chip}>
+            <Feather name="zap" size={14} color={palette.primary} />
+            <Text style={styles.chipText}>AI sorting</Text>
+          </View>
+          <View style={styles.chip}>
+            <Feather name="list" size={14} color={palette.primary} />
+            <Text style={styles.chipText}>Templates</Text>
+          </View>
+          <View style={styles.chip}>
+            <Feather name="map-pin" size={14} color={palette.primary} />
+            <Text style={styles.chipText}>Store layouts</Text>
+          </View>
+        </View>
+      </FadeInView>
 
-    <Button label="Sign in" onPress={() => navigation.navigate('SignIn')} />
-    <Button
-      label="Create an account"
-      variant="secondary"
-      onPress={() => navigation.navigate('SignUp')}
-    />
-  </View>
-);
+      <FadeInView delay={120} style={styles.footer}>
+        <Button
+          label="Sign In"
+          onPress={() => navigation.navigate('SignIn')}
+          style={styles.button}
+        />
+        <Button
+          label="Create Account"
+          variant="secondary"
+          onPress={() => navigation.navigate('SignUp')}
+          style={styles.button}
+        />
+      </FadeInView>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 28,
-    justifyContent: 'center',
     backgroundColor: palette.background,
+    padding: 24,
+    position: 'relative',
   },
-  badge: {
-    color: palette.accent,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: '700',
-    marginBottom: 12,
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  iconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+    ...layout.shadows.large,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: palette.text,
-    marginBottom: 12,
+    ...typography.display,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   subtitle: {
-    fontSize: 16,
-    color: palette.muted,
-    marginBottom: 32,
+    ...typography.body,
+    color: palette.textSecondary,
+    textAlign: 'center',
+    maxWidth: 280,
+    marginBottom: 24,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: layout.borderRadius.full,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...layout.shadows.small,
+  },
+  chipText: {
+    ...typography.caption,
+    color: palette.textSecondary,
+  },
+  footer: {
+    gap: 16,
+    marginBottom: 24,
+    zIndex: 1,
+  },
+  button: {
+    width: '100%',
   },
 });
 

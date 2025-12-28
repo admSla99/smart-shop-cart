@@ -36,10 +36,6 @@ export const sortByLayout = async (params: {
         items,
         layout: layout.map((area) => ({ area_name: area.area_name, sequence: area.sequence })),
       },
-      // Allow the built-in session (ANON) to be used without JWT if function is public
-      headers: {
-        Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''}`,
-      },
     },
   );
 

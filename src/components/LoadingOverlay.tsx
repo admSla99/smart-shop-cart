@@ -1,7 +1,9 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { palette } from '../theme/colors';
+import { typography } from '../theme/typography';
 
 type LoadingOverlayProps = {
   message?: string;
@@ -9,6 +11,12 @@ type LoadingOverlayProps = {
 
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message = 'Loading...' }) => (
   <View style={styles.container}>
+    <LinearGradient
+      colors={[palette.background, palette.surface]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={StyleSheet.absoluteFillObject}
+    />
     <ActivityIndicator size="large" color={palette.primary} />
     <Text style={styles.text}>{message}</Text>
   </View>
@@ -19,13 +27,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: palette.background,
     paddingHorizontal: 24,
+    gap: 12,
+    position: 'relative',
   },
   text: {
     marginTop: 12,
-    fontSize: 16,
-    color: palette.text,
+    ...typography.bodySmall,
+    color: palette.muted,
     textAlign: 'center',
   },
 });
