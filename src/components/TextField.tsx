@@ -26,6 +26,17 @@ export const TextField: React.FC<TextFieldProps> = ({
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const { onFocus, onBlur, ...inputProps } = props;
+
+  const handleFocus: TextInputProps['onFocus'] = (event) => {
+    setIsFocused(true);
+    onFocus?.(event);
+  };
+
+  const handleBlur: TextInputProps['onBlur'] = (event) => {
+    setIsFocused(false);
+    onBlur?.(event);
+  };
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -40,9 +51,9 @@ export const TextField: React.FC<TextFieldProps> = ({
         <TextInput
           style={[styles.input, style]}
           placeholderTextColor={palette.textTertiary}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          {...props}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          {...inputProps}
         />
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}

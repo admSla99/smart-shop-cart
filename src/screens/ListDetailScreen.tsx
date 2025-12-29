@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -117,7 +118,12 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       await applySortedOrder(listId, sorted);
     } catch (error) {
       console.error('Failed to auto-sort:', error);
-      // Ideally show a toast or alert here
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert(
+        'Auto-sort failed',
+        `We couldn’t sort your items. ${errorMessage}`,
+      );
     } finally {
       setSorting(false);
     }
@@ -160,6 +166,26 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     } finally {
       setLayoutLoading(false);
     }
+  };
+
+  const addNewArea = () => {
+    const trimmedName = newAreaName.trim();
+    if (!trimmedName) return;
+    const tempId = `temp-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    setLayoutAreas((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        user_id: user?.id ?? '',
+        shop_name: shopName ?? '',
+        area_name: trimmedName,
+        sequence: prev.length + 1,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+    setNewAreaName('');
   };
 
   const listItems = items[listId] || [];
@@ -321,38 +347,10 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   placeholder="Add new area..."
                   placeholderTextColor={palette.muted}
                   style={styles.addAreaInput}
-                  onSubmitEditing={() => {
-                    if (!newAreaName.trim()) return;
-                    setLayoutAreas([
-                      ...layoutAreas,
-                      {
-                        id: `temp-${Date.now()}`,
-                        user_id: user?.id ?? '',
-                        shop_name: shopName ?? '',
-                        area_name: newAreaName.trim(),
-                        sequence: layoutAreas.length + 1,
-                        created_at: new Date().toISOString(),
-                      },
-                    ]);
-                    setNewAreaName('');
-                  }}
+                  onSubmitEditing={addNewArea}
                 />
                 <Pressable
-                  onPress={() => {
-                    if (!newAreaName.trim()) return;
-                    setLayoutAreas([
-                      ...layoutAreas,
-                      {
-                        id: `temp-${Date.now()}`,
-                        user_id: user?.id ?? '',
-                        shop_name: shopName ?? '',
-                        area_name: newAreaName.trim(),
-                        sequence: layoutAreas.length + 1,
-                        created_at: new Date().toISOString(),
-                      },
-                    ]);
-                    setNewAreaName('');
-                  }}
+                  onPress={addNewArea}
                   style={styles.addAreaButton}
                 >
                   <Feather name="plus" size={20} color={palette.text} />
