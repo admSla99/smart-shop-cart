@@ -55,6 +55,7 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [adding, setAdding] = useState(false);
   const [showLayoutConfig, setShowLayoutConfig] = useState(false);
   const [layoutAreas, setLayoutAreas] = useState<ShopLayoutArea[]>([]);
+  const [layoutFetchLoading, setLayoutFetchLoading] = useState(false);
   const [layoutLoading, setLayoutLoading] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [newAreaName, setNewAreaName] = useState('');
@@ -87,7 +88,18 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   useEffect(() => {
     if (user?.id && shopName) {
-      fetchLayout(user.id, shopName).then(setLayoutAreas).catch(console.error);
+      setLayoutFetchLoading(true);
+      setLayoutError(null);
+      fetchLayout(user.id, shopName)
+        .then(setLayoutAreas)
+        .catch((error) => {
+          const errorMessage =
+            error instanceof Error && error.message ? error.message : 'Unknown error';
+          setLayoutError(`Unable to load layout. ${errorMessage}`);
+        })
+        .finally(() => {
+          setLayoutFetchLoading(false);
+        });
     }
   }, [fetchLayout, user?.id, shopName]);
 
@@ -296,6 +308,13 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               <Text style={styles.configSubtitle}>
                 Order areas to match your path through the store.
               </Text>
+              {layoutFetchLoading && (
+                <View style={styles.layoutStatus}>
+                  <ActivityIndicator size="small" color={palette.primary} />
+                  <Text style={styles.layoutStatusText}>Loading layout...</Text>
+                </View>
+              )}
+              {layoutError && <Text style={styles.error}>{layoutError}</Text>}
 
               {layoutAreas.map((area, index) => (
                 <View key={area.id} style={styles.areaRow}>
@@ -356,8 +375,6 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                   <Feather name="plus" size={20} color={palette.text} />
                 </Pressable>
               </View>
-
-              {layoutError && <Text style={styles.error}>{layoutError}</Text>}
 
               <Button
                 label="Save Layout"
@@ -568,6 +585,16 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: palette.textSecondary,
     marginBottom: 24,
+  },
+  layoutStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  layoutStatusText: {
+    ...typography.caption,
+    color: palette.textSecondary,
   },
   areaRow: {
     flexDirection: 'row',
