@@ -80,6 +80,10 @@ supabase/
 - `AppNavigator` switches between auth and app stacks based on Supabase session.
 - Keep shop names consistent (matching in templates and lists) for best template matching.
 
+### Automated tests
+- `npm test` runs Jest with the `jest-expo` preset.
+- Component tests use `@testing-library/react-native`.
+
 ### Testing checklist
 - [ ] Sign up/sign in; confirm profile row creation.
 - [ ] Create lists with/without shop names; add/delete items.
