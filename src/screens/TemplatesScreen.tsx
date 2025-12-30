@@ -9,12 +9,17 @@ import {
   Text,
   TextInput,
   View,
+  KeyboardAvoidingView,
 } from 'react-native';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
+import { DecorativeBackground } from '../components/DecorativeBackground';
 import { EmptyState } from '../components/EmptyState';
+import { FadeInView } from '../components/FadeInView';
 import { useAuth } from '../contexts/AuthContext';
 import { palette } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { layout } from '../theme/layout';
 import { supabase } from '../lib/supabase';
 import type { ShopLayoutTemplate } from '../types';
 
@@ -27,6 +32,7 @@ type TemplateGroup = {
 };
 
 const TemplatesScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [templates, setTemplates] = useState<ShopLayoutTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -215,200 +221,248 @@ const TemplatesScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Template manager</Text>
-        <Text style={styles.sectionSubtitle}>
-          Create or edit store templates used for layout sorting.
-        </Text>
-
-        <Text style={styles.inputLabel}>Shop name</Text>
-        <TextInput
-          value={shopName}
-          onChangeText={setShopName}
-          placeholder="e.g. Lidl"
-          placeholderTextColor={palette.muted}
-          style={styles.input}
-        />
-
-        <Text style={styles.inputLabel}>Template name</Text>
-        <TextInput
-          value={templateName}
-          onChangeText={setTemplateName}
-          placeholder="e.g. Default"
-          placeholderTextColor={palette.muted}
-          style={styles.input}
-        />
-
-        <Text style={styles.inputLabel}>Areas (one per line)</Text>
-        <TextInput
-          value={areasInput}
-          onChangeText={setAreasInput}
-          placeholder={`Produce\nBakery\nCheckout`}
-          placeholderTextColor={palette.muted}
-          style={[styles.input, styles.textArea]}
-          multiline
-          textAlignVertical="top"
-        />
-
-        {formError ? <Text style={styles.error}>{formError}</Text> : null}
-        {editingKey ? (
-          <Text style={styles.editingHint}>
-            Editing {templateName || 'template'} for {shopName || 'shop'}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.screen}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 20 : 0}
+    >
+      <DecorativeBackground variant="cool" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+        <FadeInView style={styles.card}>
+          <Text style={styles.sectionTitle}>Template manager</Text>
+          <Text style={styles.sectionSubtitle}>
+            Create or edit store templates used for layout sorting.
           </Text>
-        ) : null}
 
-        <Button label={editingKey ? 'Save changes' : 'Add template'} onPress={handleSubmit} loading={saving} />
-        {editingKey ? (
-          <Button label="Cancel editing" variant="ghost" onPress={resetForm} disabled={saving} />
-        ) : null}
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.listHeader}>
-          <Text style={styles.sectionTitle}>Existing templates</Text>
-          {loading ? <ActivityIndicator color={palette.accent} /> : null}
-        </View>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {!loading && groupedTemplates.length === 0 ? (
-          <EmptyState
-            title="No templates yet"
-            description="Create a template above to make it available in lists."
+          <Text style={styles.inputLabel}>Shop name</Text>
+          <TextInput
+            value={shopName}
+            onChangeText={setShopName}
+            placeholder="e.g. Lidl"
+            placeholderTextColor={palette.muted}
+            style={styles.input}
           />
-        ) : null}
-        {groupedTemplates.map((group) => (
-          <View key={group.key} style={styles.templateCard}>
-            <View style={styles.templateHeader}>
-              <View>
-                <Text style={styles.templateTitle}>{group.template_name}</Text>
-                <Text style={styles.templateSubtitle}>{group.shop_name}</Text>
-              </View>
-              <View style={styles.templateActions}>
-                <Button label="Edit" variant="secondary" onPress={() => startEditing(group)} />
-                <Button
-                  label="Delete"
-                  variant="ghost"
-                  onPress={() => confirmDelete(group)}
-                  disabled={saving}
-                />
-              </View>
-            </View>
-            <View style={styles.areaList}>
-              {group.areas.map((area) => (
-                <View key={area.id} style={styles.areaChip}>
-                  <Text style={styles.areaChipLabel}>
-                    {area.sequence}. {area.area_name}
-                  </Text>
-                </View>
-              ))}
-            </View>
+
+          <Text style={styles.inputLabel}>Template name</Text>
+          <TextInput
+            value={templateName}
+            onChangeText={setTemplateName}
+            placeholder="e.g. Default"
+            placeholderTextColor={palette.muted}
+            style={styles.input}
+          />
+
+          <Text style={styles.inputLabel}>Areas (one per line)</Text>
+          <TextInput
+            value={areasInput}
+            onChangeText={setAreasInput}
+            placeholder={`Produce\nBakery\nCheckout`}
+            placeholderTextColor={palette.muted}
+            style={[styles.input, styles.textArea]}
+            multiline
+            textAlignVertical="top"
+          />
+
+          {formError ? <Text style={styles.error}>{formError}</Text> : null}
+          {editingKey ? (
+            <Text style={styles.editingHint}>
+              Editing {templateName || 'template'} for {shopName || 'shop'}
+            </Text>
+          ) : null}
+
+          <Button
+            label={editingKey ? 'Save changes' : 'Add template'}
+            icon={editingKey ? 'save' : 'plus'}
+            onPress={handleSubmit}
+            loading={saving}
+            style={{ marginTop: 16 }}
+          />
+          {editingKey ? (
+            <Button
+              label="Cancel editing"
+              icon="x-circle"
+              variant="ghost"
+              onPress={resetForm}
+              disabled={saving}
+              style={{ marginTop: 8 }}
+            />
+          ) : null}
+        </FadeInView>
+
+        <FadeInView delay={120} style={styles.card}>
+          <View style={styles.listHeader}>
+            <Text style={styles.sectionTitle}>Existing templates</Text>
+            {loading ? <ActivityIndicator color={palette.primary} /> : null}
           </View>
-        ))}
-      </View>
-    </ScrollView>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {!loading && groupedTemplates.length === 0 ? (
+            <EmptyState
+              title="No templates yet"
+              description="Create a template above to make it available in lists."
+            />
+          ) : null}
+          {groupedTemplates.map((group) => (
+            <View key={group.key} style={styles.templateCard}>
+              <View style={styles.templateHeader}>
+                <View>
+                  <Text style={styles.templateTitle}>{group.template_name}</Text>
+                  <Text style={styles.templateSubtitle}>{group.shop_name}</Text>
+                </View>
+                <View style={styles.templateActions}>
+                  <Button
+                    label="Edit"
+                    variant="secondary"
+                    icon="edit-3"
+                    compact
+                    onPress={() => startEditing(group)}
+                  />
+                  <Button
+                    label="Delete"
+                    variant="ghost"
+                    icon="trash-2"
+                    compact
+                    onPress={() => confirmDelete(group)}
+                    disabled={saving}
+                  />
+                </View>
+              </View>
+              <View style={styles.areaList}>
+                {group.areas.map((area) => (
+                  <View key={area.id} style={styles.areaChip}>
+                    <Text style={styles.areaChipLabel}>
+                      {area.sequence}. {area.area_name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ))}
+        </FadeInView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: palette.background,
+    position: 'relative',
+  },
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: palette.background,
+    backgroundColor: 'transparent',
+    zIndex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   card: {
     backgroundColor: palette.surface,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: layout.borderRadius.xl,
+    padding: 20,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: palette.border,
+    ...layout.shadows.medium,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.text,
+    ...typography.h3,
     marginBottom: 4,
   },
   sectionSubtitle: {
-    color: palette.muted,
-    marginBottom: 12,
+    ...typography.body,
+    color: palette.textSecondary,
+    marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.muted,
-    marginBottom: 6,
+    ...typography.label,
+    color: palette.textSecondary,
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
     borderColor: palette.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
+    borderRadius: layout.borderRadius.l,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     color: palette.text,
-    marginBottom: 12,
-    backgroundColor: palette.card,
+    marginBottom: 16,
+    backgroundColor: palette.surface,
+    ...layout.shadows.small,
   },
   textArea: {
-    minHeight: 100,
+    minHeight: 120,
   },
   error: {
+    ...typography.caption,
     color: palette.danger,
-    marginBottom: 8,
+    marginBottom: 16,
   },
   editingHint: {
-    color: palette.muted,
+    ...typography.caption,
+    color: palette.textSecondary,
     marginBottom: 8,
+    fontStyle: 'italic',
   },
   listHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   templateCard: {
     borderWidth: 1,
     borderColor: palette.border,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    backgroundColor: palette.card,
+    borderRadius: layout.borderRadius.l,
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: palette.surface,
+    ...layout.shadows.small,
   },
   templateHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   templateTitle: {
-    color: palette.text,
-    fontWeight: '700',
+    ...typography.h3,
     fontSize: 16,
   },
   templateSubtitle: {
-    color: palette.muted,
+    ...typography.body,
+    color: palette.textSecondary,
+    fontSize: 14,
   },
   templateActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   areaList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   areaChip: {
-    backgroundColor: palette.surface,
+    backgroundColor: palette.card,
     borderColor: palette.border,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: layout.borderRadius.m,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 4,
     marginRight: 8,
     marginBottom: 8,
   },
   areaChipLabel: {
-    color: palette.text,
+    ...typography.caption,
     fontWeight: '600',
   },
 });

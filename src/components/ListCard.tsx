@@ -1,105 +1,194 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
-import { getReadableTextColor, palette } from '../theme/colors';
+import { palette } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { layout } from '../theme/layout';
 
 type ListCardProps = {
   title: string;
+  shopName?: string;
+  shopColor?: string;
   itemsCount: number;
-  shopName?: string | null;
-  shopColor?: string | null;
   onPress: () => void;
-  onDelete?: () => void;
+  onDelete: () => void;
 };
 
 export const ListCard: React.FC<ListCardProps> = ({
   title,
-  itemsCount,
   shopName,
   shopColor,
+  itemsCount,
   onPress,
   onDelete,
-}) => (
-  <Pressable style={styles.card} onPress={onPress}>
-    <View style={{ flex: 1 }}>
-      <Text style={styles.title}>{title}</Text>
-      {shopName ? (
-        <View style={[styles.shopPill, shopColor ? { backgroundColor: shopColor } : styles.defaultPill]}>
-          <Text
-            style={[
-              styles.shopLabel,
-              shopColor ? { color: getReadableTextColor(shopColor) } : undefined,
-            ]}
+}) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 20,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View style={[styles.container, { transform: [{ scale }] }]}>
+        <View
+          style={[
+            styles.topAccent,
+            { backgroundColor: shopColor || palette.primary },
+          ]}
+        />
+        <View style={styles.header}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1}>
+              {title}
+            </Text>
+            {shopName && (
+              <View
+                style={[
+                  styles.badge,
+                  { backgroundColor: shopColor ? `${shopColor}20` : palette.elevated },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.badgeDot,
+                    { backgroundColor: shopColor || palette.textSecondary },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.badgeText,
+                    { color: shopColor || palette.textSecondary },
+                  ]}
+                >
+                  {shopName}
+                </Text>
+              </View>
+            )}
+          </View>
+          <Pressable
+            onPress={onDelete}
+            style={({ pressed }) => [styles.deleteButton, pressed && styles.deletePressed]}
+            hitSlop={10}
           >
-            {shopName}
-          </Text>
+            <Feather name="trash-2" size={18} color={palette.textTertiary} />
+          </Pressable>
         </View>
-      ) : null}
-      <Text style={styles.meta}>
-        {itemsCount} item{itemsCount === 1 ? '' : 's'}
-      </Text>
-    </View>
-    {onDelete ? (
-      <Pressable
-        style={styles.deleteButton}
-        onPress={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-      >
-        <Text style={styles.deleteLabel}>Delete</Text>
-      </Pressable>
-    ) : null}
-  </Pressable>
-);
+
+        <View style={styles.footer}>
+          <View style={styles.countBadge}>
+            <Feather name="shopping-cart" size={14} color={palette.primary} />
+            <Text style={styles.countText}>
+              {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={palette.textTertiary} />
+        </View>
+      </Animated.View>
+    </Pressable>
+  );
+};
 
 const styles = StyleSheet.create({
-  card: {
+  container: {
+    backgroundColor: palette.surface,
+    borderRadius: layout.borderRadius.l,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
+    overflow: 'hidden',
+    ...layout.shadows.medium,
+  },
+  topAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    borderTopLeftRadius: layout.borderRadius.l,
+    borderTopRightRadius: layout.borderRadius.l,
+  },
+  header: {
     flexDirection: 'row',
-    backgroundColor: palette.card,
-    padding: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  titleRow: {
+    flex: 1,
+    marginRight: 12,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: palette.text,
+    ...typography.h3,
+    marginBottom: 8,
   },
-  meta: {
-    marginTop: 4,
-    color: palette.muted,
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: layout.borderRadius.full,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
-  shop: {
-    marginTop: 4,
-    color: palette.muted,
-    fontWeight: '500',
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  badgeText: {
+    ...typography.caption,
+    fontWeight: '700',
   },
   deleteButton: {
+    padding: 8,
+    margin: -8,
+  },
+  deletePressed: {
+    opacity: 0.6,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+  },
+  countBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 24,
-    backgroundColor: 'rgba(248,113,113,0.15)',
+    borderRadius: layout.borderRadius.full,
+    backgroundColor: palette.card,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
-  deleteLabel: {
-    color: palette.danger,
+  countText: {
+    ...typography.bodySmall,
+    color: palette.textSecondary,
     fontWeight: '600',
-  },
-  shopPill: {
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  defaultPill: {
-    backgroundColor: 'rgba(99,102,241,0.25)',
-  },
-  shopLabel: {
-    fontWeight: '600',
-    fontSize: 13,
   },
 });
-
-export default ListCard;

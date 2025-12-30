@@ -4,22 +4,38 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
+  UIManager,
   View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
+import { DecorativeBackground } from '../components/DecorativeBackground';
+import { FadeInView } from '../components/FadeInView';
 import { EmptyState } from '../components/EmptyState';
 import { ColorPicker } from '../components/ColorPicker';
 import { ListCard } from '../components/ListCard';
+import { TextField } from '../components/TextField';
 import { useAuth } from '../contexts/AuthContext';
 import type { AppStackParamList } from '../navigation/AppNavigator';
 import { useShoppingStore } from '../store/useShoppingLists';
 import { palette, shopBrandColors, shopColors } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { layout } from '../theme/layout';
+
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Home'>;
 
@@ -31,6 +47,7 @@ const SHOP_PRESETS = [
 ];
 
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const [newListTitle, setNewListTitle] = useState('');
   const [selectedShop, setSelectedShop] = useState<string>(SHOP_PRESETS[0]?.label ?? 'Kaufland');
@@ -44,6 +61,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const greetingName = useMemo(() => {
     return user?.user_metadata?.display_name ?? user?.email ?? 'Friend';
   }, [user]);
+  const totalItems = useMemo(() => {
+    return Object.values(items).reduce((sum, listItems) => sum + listItems.length, 0);
+  }, [items]);
 
   const loadLists = useCallback(() => {
     if (user?.id) {
@@ -56,6 +76,11 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       loadLists();
     }, [loadLists]),
   );
+
+  const toggleForm = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowNewListForm((prev) => !prev);
+  };
 
   const handleCreateList = async () => {
     if (!user?.id) {
@@ -77,7 +102,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       setCustomShopName('');
       setSelectedShop(SHOP_PRESETS[0]?.label ?? 'Kaufland');
       setShopColor(SHOP_PRESETS[0]?.color ?? shopColors[0]);
-      setShowNewListForm(false);
+      toggleForm();
     } catch (err) {
       setError((err as Error)?.message ?? 'Unable to create list');
     } finally {
@@ -86,6 +111,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleDeleteList = async (listId: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     try {
       await deleteList(listId);
     } catch (err) {
@@ -96,7 +122,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const renderList = ({ item }: { item: typeof lists[number] }) => (
     <ListCard
       title={item.title}
-      shopName={item.shop_name}
+      shopName={item.shop_name ?? undefined}
       shopColor={item.shop_color ?? undefined}
       itemsCount={items[item.id]?.length ?? 0}
       onPress={() =>
@@ -111,43 +137,59 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     />
   );
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greetingLabel}>Welcome back</Text>
-          <Text style={styles.greetingValue}>{greetingName}</Text>
+  const renderListHeader = () => (
+    <View style={styles.listHeader}>
+      <FadeInView style={styles.headerCard}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.greetingLabel}>Welcome back,</Text>
+            <Text style={styles.greetingValue}>{greetingName}</Text>
+          </View>
+          <Pressable style={styles.signOutButton} onPress={signOut}>
+            <Feather name="log-out" size={18} color={palette.textSecondary} />
+          </Pressable>
         </View>
-        <View style={styles.headerActions}>
-          <Button
-            label={showNewListForm ? 'Close' : 'Add new list'}
-            variant="secondary"
-            onPress={() => setShowNewListForm((prev) => !prev)}
-          />
-          <Button
-            label="Templates"
-            variant="secondary"
-            onPress={() => navigation.navigate('Templates')}
-          />
-          <Text style={styles.signOut} onPress={signOut}>
-            Sign out
-          </Text>
+        <View style={styles.headerMeta}>
+          <View style={styles.metaPill}>
+            <Feather name="list" size={14} color={palette.primary} />
+            <Text style={styles.metaText}>{lists.length} lists</Text>
+          </View>
+          <View style={styles.metaPill}>
+            <Feather name="shopping-cart" size={14} color={palette.primary} />
+            <Text style={styles.metaText}>{totalItems} items</Text>
+          </View>
         </View>
-      </View>
+      </FadeInView>
 
-      {showNewListForm ? (
-        <View style={styles.newListCard}>
-          <Text style={styles.sectionTitle}>Plan your next run</Text>
-          <Text style={styles.sectionSubtitle}>Name the list, assign the store, and choose a color.</Text>
-          <Text style={styles.inputLabel}>List name</Text>
-          <TextInput
+      <FadeInView delay={80} style={styles.actionRow}>
+        <Button
+          label={showNewListForm ? 'Cancel' : 'New List'}
+          variant={showNewListForm ? 'ghost' : 'primary'}
+          icon={showNewListForm ? 'x' : 'plus'}
+          onPress={toggleForm}
+          style={{ flex: 1 }}
+        />
+        <Button
+          label="Templates"
+          variant="secondary"
+          icon="grid"
+          onPress={() => navigation.navigate('Templates')}
+          style={{ flex: 1 }}
+        />
+      </FadeInView>
+
+      {showNewListForm && (
+        <FadeInView delay={120} style={styles.formCard}>
+          <Text style={styles.formTitle}>Create New List</Text>
+
+          <TextField
+            label="List Name"
             value={newListTitle}
             onChangeText={setNewListTitle}
-            placeholder="e.g. Friday dinner party"
-            placeholderTextColor={palette.muted}
-            style={styles.input}
+            placeholder="e.g. Weekly Groceries"
           />
-          <Text style={styles.inputLabel}>Shop (optional)</Text>
+
+          <Text style={styles.sectionLabel}>Shop</Text>
           <View style={styles.shopOptionsRow}>
             {SHOP_PRESETS.map((option) => {
               const isSelected = selectedShop === option.label;
@@ -162,7 +204,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
                   }}
                 >
                   <View style={[styles.shopOptionSwatch, { backgroundColor: option.color }]} />
-                  <Text style={styles.shopOptionLabel}>{option.label}</Text>
+                  <Text style={[styles.shopOptionLabel, isSelected && styles.shopOptionLabelSelected]}>
+                    {option.label}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -175,32 +219,62 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               onPress={() => setSelectedShop(CUSTOM_SHOP_OPTION)}
             >
               <View style={[styles.shopOptionSwatch, styles.customSwatch]} />
-              <Text style={styles.shopOptionLabel}>Custom</Text>
+              <Text style={[styles.shopOptionLabel, selectedShop === CUSTOM_SHOP_OPTION && styles.shopOptionLabelSelected]}>
+                Custom
+              </Text>
             </Pressable>
           </View>
-          {selectedShop === CUSTOM_SHOP_OPTION ? (
-            <TextInput
+
+          {selectedShop === CUSTOM_SHOP_OPTION && (
+            <TextField
+              label="Shop Name"
               value={customShopName}
               onChangeText={setCustomShopName}
-              placeholder="Type your shop name"
-              placeholderTextColor={palette.muted}
-              style={styles.input}
+              placeholder="Enter shop name"
+              containerStyle={{ marginTop: 12 }}
             />
-          ) : null}
-          <Text style={styles.inputLabel}>Badge color</Text>
-          <ColorPicker colors={shopColors} selected={shopColor} onSelect={setShopColor} />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Button label="Save list" onPress={handleCreateList} loading={creating} />
-        </View>
-      ) : null}
+          )}
 
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>Your lists</Text>
-        {loadingLists ? <ActivityIndicator color={palette.accent} /> : null}
-      </View>
-      {loadingLists && lists.length === 0 ? (
-        <ActivityIndicator style={{ marginTop: 20 }} color={palette.accent} />
-      ) : (
+          <Text style={styles.sectionLabel}>Badge Color</Text>
+          <ColorPicker colors={shopColors} selected={shopColor} onSelect={setShopColor} />
+
+          {error && <Text style={styles.error}>{error}</Text>}
+
+          <Button
+            label="Create List"
+            onPress={handleCreateList}
+            loading={creating}
+            style={{ marginTop: 24 }}
+          />
+        </FadeInView>
+      )}
+
+      <Text style={styles.sectionTitle}>Your Lists</Text>
+    </View>
+  );
+
+  const renderEmpty = () => {
+    if (loadingLists) {
+      return (
+        <ActivityIndicator style={styles.loadingIndicator} color={palette.primary} size="large" />
+      );
+    }
+    return (
+      <EmptyState
+        title="No lists yet"
+        description="Create your first shopping list to get started."
+      />
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <DecorativeBackground variant="warm" />
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 20 : 0}
+      >
         <FlatList
           data={lists}
           keyExtractor={(list) => list.id}
@@ -209,19 +283,20 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <RefreshControl
               refreshing={loadingLists}
               onRefresh={loadLists}
-              tintColor={palette.text}
+              tintColor={palette.primary}
               colors={[palette.primary]}
             />
           }
-          contentContainerStyle={lists.length === 0 ? { flexGrow: 1 } : undefined}
-          ListEmptyComponent={
-            <EmptyState
-              title="No lists yet"
-              description='Tap "Add new list" to start planning your next run.'
-            />
-          }
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 32 },
+          ]}
+          ListHeaderComponent={renderListHeader}
+          ListEmptyComponent={renderEmpty}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         />
-      )}
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -229,115 +304,149 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
     backgroundColor: palette.background,
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    position: 'relative',
   },
-  header: {
-    paddingTop: 12,
-    paddingBottom: 24,
+  keyboardContainer: {
+    flex: 1,
+    zIndex: 1,
+  },
+  listHeader: {
+    zIndex: 1,
+  },
+  headerCard: {
+    backgroundColor: palette.surface,
+    borderRadius: layout.borderRadius.xl,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...layout.shadows.medium,
+    zIndex: 1,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 16,
   },
   greetingLabel: {
-    color: palette.muted,
-    fontSize: 14,
+    ...typography.body,
+    color: palette.textSecondary,
   },
   greetingValue: {
-    fontSize: 24,
-    fontWeight: '700',
+    ...typography.h1,
     color: palette.text,
   },
-  signOut: {
-    color: palette.danger,
-    fontWeight: '600',
-    marginLeft: 12,
-  },
-  newListCard: {
-    backgroundColor: palette.surface,
-    padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: palette.border,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.text,
-    marginBottom: 6,
-  },
-  sectionSubtitle: {
-    color: palette.muted,
-    marginBottom: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: palette.border,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: palette.text,
-    marginBottom: 12,
+  signOutButton: {
+    padding: 10,
     backgroundColor: palette.card,
+    borderRadius: layout.borderRadius.full,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
-  error: {
-    color: palette.danger,
-    marginBottom: 10,
+  headerMeta: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
   },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: palette.muted,
-    marginBottom: 6,
-  },
-  sectionHeaderRow: {
+  metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: layout.borderRadius.full,
+    backgroundColor: palette.card,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  metaText: {
+    ...typography.caption,
+    color: palette.textSecondary,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    marginBottom: 24,
+    gap: 12,
+    zIndex: 1,
+  },
+  formCard: {
+    backgroundColor: palette.surface,
+    borderRadius: layout.borderRadius.xl,
+    padding: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: palette.border,
+    ...layout.shadows.medium,
+    zIndex: 1,
+  },
+  formTitle: {
+    ...typography.h3,
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    ...typography.label,
+    color: palette.textSecondary,
+    marginTop: 16,
     marginBottom: 12,
   },
   shopOptionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 12,
+    gap: 8,
   },
   shopOption: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
+    paddingVertical: 8,
+    borderRadius: layout.borderRadius.full,
     borderWidth: 1,
     borderColor: palette.border,
     backgroundColor: palette.card,
-    marginRight: 10,
-    marginBottom: 10,
+    gap: 8,
   },
   shopOptionSelected: {
     borderColor: palette.primary,
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: 'rgba(255, 107, 74, 0.12)',
   },
   shopOptionSwatch: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    marginRight: 8,
   },
   customSwatch: {
     borderWidth: 1,
-    borderColor: palette.muted,
+    borderColor: palette.textSecondary,
     backgroundColor: 'transparent',
   },
   shopOptionLabel: {
-    color: palette.text,
+    ...typography.caption,
     fontWeight: '600',
+    color: palette.textSecondary,
+  },
+  shopOptionLabelSelected: {
+    color: palette.primary,
+  },
+  error: {
+    ...typography.caption,
+    color: palette.danger,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  sectionTitle: {
+    ...typography.h2,
+    marginBottom: 16,
+    zIndex: 1,
+  },
+  listContent: {
+    paddingBottom: 0,
+  },
+  loadingIndicator: {
+    marginTop: 20,
   },
 });
 

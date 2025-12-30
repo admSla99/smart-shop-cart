@@ -1,4 +1,4 @@
-import { DarkTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
@@ -34,9 +34,9 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<AppStackParamList>();
 
 const navTheme = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
     background: palette.background,
     card: palette.surface,
     border: palette.border,
@@ -54,7 +54,15 @@ const AuthFlow = () => (
 );
 
 const AppFlow = () => (
-  <MainStack.Navigator>
+  <MainStack.Navigator
+    screenOptions={{
+      headerStyle: { backgroundColor: palette.background },
+      headerShadowVisible: false,
+      headerTintColor: palette.text,
+      headerTitleStyle: { fontWeight: '700' },
+      contentStyle: { backgroundColor: palette.background },
+    }}
+  >
     <MainStack.Screen
       name="Home"
       component={HomeScreen}

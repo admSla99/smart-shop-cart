@@ -1,90 +1,120 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 import { palette } from '../theme/colors';
+import { typography } from '../theme/typography';
+import { layout } from '../theme/layout';
 
 type ItemRowProps = {
-  name: string;
-  quantity?: number | null;
-  areaName?: string | null;
-  isChecked: boolean;
+  label: string;
+  isCompleted: boolean;
   onToggle: () => void;
-  onDelete?: () => void;
+  onDelete: () => void;
 };
 
-const checkboxStyle = (checked: boolean): ViewStyle => ({
-  width: 28,
-  height: 28,
-  borderRadius: 8,
-  borderWidth: 2,
-  borderColor: checked ? palette.success : palette.border,
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginRight: 12,
-});
+export const ItemRow: React.FC<ItemRowProps> = ({
+  label,
+  isCompleted,
+  onToggle,
+  onDelete,
+}) => {
+  const animatedValue = useRef(new Animated.Value(isCompleted ? 1 : 0)).current;
 
-export const ItemRow: React.FC<ItemRowProps> = ({ name, quantity, areaName, isChecked, onToggle, onDelete }) => (
-  <View style={styles.row}>
-    <Pressable style={checkboxStyle(isChecked)} onPress={onToggle}>
-      {isChecked ? <Text style={styles.checkmark}>✓</Text> : null}
-    </Pressable>
-    <View style={styles.textContainer}>
-      <Text style={[styles.name, isChecked && styles.nameDone]}>{name}</Text>
-      {quantity !== null && quantity !== undefined ? (
-        <Text style={styles.quantity}>{quantity}</Text>
-      ) : null}
-      {areaName ? <Text style={styles.area}>{areaName}</Text> : null}
-    </View>
-    {onDelete ? (
-      <Pressable onPress={onDelete} style={styles.delete}>
-        <Text style={styles.deleteText}>Remove</Text>
+  useEffect(() => {
+    Animated.timing(animatedValue, {
+      toValue: isCompleted ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false, // color interpolation doesn't support native driver
+    }).start();
+  }, [isCompleted]);
+
+  const textColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [palette.text, palette.textTertiary],
+  });
+
+  const checkboxColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [palette.borderHighlight, palette.success],
+  });
+
+  const checkboxBorderColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [palette.textSecondary, palette.success],
+  });
+
+  return (
+    <View style={styles.container}>
+      <Pressable style={styles.content} onPress={onToggle}>
+        <Animated.View
+          style={[
+            styles.checkbox,
+            {
+              backgroundColor: checkboxColor,
+              borderColor: checkboxBorderColor,
+            },
+          ]}
+        >
+          {isCompleted && <Feather name="check" size={12} color="#FFF" />}
+        </Animated.View>
+        <Animated.Text
+          style={[
+            styles.label,
+            { color: textColor, textDecorationLine: isCompleted ? 'line-through' : 'none' },
+          ]}
+        >
+          {label}
+        </Animated.Text>
       </Pressable>
-    ) : null}
-  </View>
-);
+      <Pressable
+        onPress={onDelete}
+        style={({ pressed }) => [styles.deleteButton, pressed && styles.deletePressed]}
+        hitSlop={10}
+      >
+        <Feather name="x" size={18} color={palette.textTertiary} />
+      </Pressable>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-  row: {
+  container: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    backgroundColor: palette.surface,
+    marginBottom: 8,
+    borderRadius: layout.borderRadius.m,
+    borderWidth: 1,
     borderColor: palette.border,
+    ...layout.shadows.small,
   },
-  checkmark: {
-    color: palette.success,
-    fontWeight: '700',
+  content: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  textContainer: {
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    ...typography.bodyMedium,
     flex: 1,
   },
-  name: {
-    fontSize: 16,
-    color: palette.text,
+  deleteButton: {
+    padding: 8,
+    margin: -8,
   },
-  nameDone: {
-    textDecorationLine: 'line-through',
-    color: palette.muted,
-  },
-  quantity: {
-    color: palette.muted,
-    marginTop: 2,
-  },
-  area: {
-    color: palette.muted,
-    marginTop: 2,
-    fontSize: 12,
-  },
-  delete: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  deleteText: {
-    color: palette.danger,
-    fontSize: 12,
-    fontWeight: '600',
+  deletePressed: {
+    opacity: 0.6,
   },
 });
-
-export default ItemRow;
