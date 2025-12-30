@@ -1,11 +1,11 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
+import { render } from '@testing-library/react-native';
 
 import { TextField } from '../TextField';
 
 describe('TextField', () => {
   it('renders without crashing', () => {
-    const tree = renderer.create(<TextField label="Name" />);
-    expect(tree.toJSON()).toBeTruthy();
+    const { getByText } = render(<TextField label='Name' />);
+    expect(getByText('Name')).toBeTruthy();
   });
 });
