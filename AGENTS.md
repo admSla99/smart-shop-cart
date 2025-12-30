@@ -4,12 +4,14 @@
 - `src/screens` holds navigation targets for auth, home, list detail, and templates; entry wiring lives in `App.tsx` + `navigation/AppNavigator`.
 - Shared UI sits in `src/components`, auth context in `src/contexts`, and state in `src/store` (Zustand stores for lists/layouts).
 - `src/lib` contains Supabase client + layout-sorting helpers; `theme` defines palette/spacing; `types` stores shared models.
+- `docs/` contains deeper documentation (development, architecture, Supabase, testing). Keep these docs in sync with product and workflow changes.
 - Supabase artifacts: `supabase-schema.sql` (tables + RLS) and edge function `supabase/functions/sort-by-layout` (OpenRouter-backed sorter). Static assets live in `assets/`; Expo config in `app.config.ts`.
 
 ## Build, Test, and Development Commands
 - `npm install` installs dependencies.
 - `npm start` launches Expo (press `w` for web, `a`/`i` for emulators).
 - `npm run android` / `npm run ios` / `npm run web` target specific platforms.
+- `npm test` runs Jest via `jest-expo`.
 - For edge-function smoke tests, run the `supabase/functions/sort-by-layout` code via the Supabase dashboard or local function runner once `OPENROUTER_API_KEY` is set.
 
 ## Coding Style & Naming Conventions
@@ -19,7 +21,7 @@
 - Use Zustand stores for all data mutations; avoid duplicating Supabase calls outside store helpers.
 
 ## Testing Guidelines
-- No automated suite yet; run manual smoke tests: auth signup/signin, create/rename/delete lists, add/check/delete items, manage layouts/templates, and verify AI sorting returns ordered items.
+- A small Jest suite exists; run `npm test` for component checks and still execute manual smoke tests: auth signup/signin, create/rename/delete lists, add/check/delete items, manage layouts/templates, and verify AI sorting returns ordered items.
 - Before merging, verify web plus at least one native target via Expo and confirm sessions persist across reloads.
 
 ## Commit & Pull Request Guidelines
