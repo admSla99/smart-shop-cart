@@ -27,6 +27,7 @@ import { TextField } from '../components/TextField';
 import { useAuth } from '../contexts/AuthContext';
 import type { AppStackParamList } from '../navigation/AppNavigator';
 import { useShoppingStore } from '../store/useShoppingLists';
+import { formatListDisplayTitle } from '../lib/listTitle';
 import { palette, shopBrandColors, shopColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { layout } from '../theme/layout';
@@ -119,23 +120,26 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const renderList = ({ item }: { item: typeof lists[number] }) => (
-    <ListCard
-      title={item.title}
-      shopName={item.shop_name ?? undefined}
-      shopColor={item.shop_color ?? undefined}
-      itemsCount={items[item.id]?.length ?? 0}
-      onPress={() =>
-        navigation.navigate('ListDetail', {
-          listId: item.id,
-          title: item.title,
-          shopName: item.shop_name,
-          shopColor: item.shop_color,
-        })
-      }
-      onDelete={() => handleDeleteList(item.id)}
-    />
-  );
+  const renderList = ({ item }: { item: typeof lists[number] }) => {
+    const displayTitle = formatListDisplayTitle(item.title, item.created_at);
+    return (
+      <ListCard
+        title={displayTitle}
+        shopName={item.shop_name ?? undefined}
+        shopColor={item.shop_color ?? undefined}
+        itemsCount={items[item.id]?.length ?? 0}
+        onPress={() =>
+          navigation.navigate('ListDetail', {
+            listId: item.id,
+            title: displayTitle,
+            shopName: item.shop_name,
+            shopColor: item.shop_color,
+          })
+        }
+        onDelete={() => handleDeleteList(item.id)}
+      />
+    );
+  };
 
   const renderListHeader = () => (
     <View style={styles.listHeader}>
