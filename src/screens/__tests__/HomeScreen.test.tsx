@@ -59,7 +59,10 @@ describe('HomeScreen', () => {
     mockLists = [];
     mockNavigate.mockClear();
     (Intl as { DateTimeFormat: unknown }).DateTimeFormat = jest.fn(() => ({
-      format: () => 'Sep 14',
+      format: (date: Date) => {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${months[date.getUTCMonth()]} ${date.getUTCDate()}`;
+      },
     })) as unknown as typeof Intl.DateTimeFormat;
   });
 
@@ -96,10 +99,10 @@ describe('HomeScreen', () => {
       />,
     );
 
-    fireEvent.press(getByText('Weekly Groceries - Sep 14'));
+    fireEvent.press(getByText('Weekly Groceries - Jan 4'));
     expect(mockNavigate).toHaveBeenCalledWith(
       'ListDetail',
-      expect.objectContaining({ title: 'Weekly Groceries - Sep 14' }),
+      expect.objectContaining({ title: 'Weekly Groceries - Jan 4' }),
     );
   });
 });
