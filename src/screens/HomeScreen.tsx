@@ -24,13 +24,16 @@ import { EmptyState } from '../components/EmptyState';
 import { ColorPicker } from '../components/ColorPicker';
 import { ListCard } from '../components/ListCard';
 import { TextField } from '../components/TextField';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import type { AppStackParamList } from '../navigation/AppNavigator';
 import { useShoppingStore } from '../store/useShoppingLists';
 import { formatListDisplayTitle } from '../lib/listTitle';
-import { palette, shopBrandColors, shopColors } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { layout } from '../theme/layout';
+import { shopBrandColors, shopColors } from '../theme/colors';
+import type { Palette } from '../theme/colors';
+import type { Typography } from '../theme/typography';
+import type { Layout } from '../theme/layout';
 
 if (Platform.OS === 'android') {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -49,6 +52,11 @@ const SHOP_PRESETS = [
 
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { palette, typography, layout } = useTheme();
+  const styles = useMemo(
+    () => createStyles(palette, typography, layout),
+    [palette, typography, layout],
+  );
   const { user, signOut } = useAuth();
   const [newListTitle, setNewListTitle] = useState('');
   const [selectedShop, setSelectedShop] = useState<string>(SHOP_PRESETS[0]?.label ?? 'Kaufland');
@@ -274,6 +282,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <DecorativeBackground variant="warm" />
+      <ThemeToggle rightOffset={20} />
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -305,153 +314,154 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.background,
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    position: 'relative',
-  },
-  keyboardContainer: {
-    flex: 1,
-    zIndex: 1,
-  },
-  listHeader: {
-    zIndex: 1,
-  },
-  headerCard: {
-    backgroundColor: palette.surface,
-    borderRadius: layout.borderRadius.xl,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.medium,
-    zIndex: 1,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  greetingLabel: {
-    ...typography.body,
-    color: palette.textSecondary,
-  },
-  greetingValue: {
-    ...typography.h1,
-    color: palette.text,
-  },
-  signOutButton: {
-    padding: 10,
-    backgroundColor: palette.card,
-    borderRadius: layout.borderRadius.full,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  headerMeta: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  metaPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: layout.borderRadius.full,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  metaText: {
-    ...typography.caption,
-    color: palette.textSecondary,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    marginBottom: 24,
-    gap: 12,
-    zIndex: 1,
-  },
-  formCard: {
-    backgroundColor: palette.surface,
-    borderRadius: layout.borderRadius.xl,
-    padding: 24,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.medium,
-    zIndex: 1,
-  },
-  formTitle: {
-    ...typography.h3,
-    marginBottom: 20,
-  },
-  sectionLabel: {
-    ...typography.label,
-    color: palette.textSecondary,
-    marginTop: 16,
-    marginBottom: 12,
-  },
-  shopOptionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  shopOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: layout.borderRadius.full,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.card,
-    gap: 8,
-  },
-  shopOptionSelected: {
-    borderColor: palette.primary,
-    backgroundColor: 'rgba(255, 107, 74, 0.12)',
-  },
-  shopOptionSwatch: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  customSwatch: {
-    borderWidth: 1,
-    borderColor: palette.textSecondary,
-    backgroundColor: 'transparent',
-  },
-  shopOptionLabel: {
-    ...typography.caption,
-    fontWeight: '600',
-    color: palette.textSecondary,
-  },
-  shopOptionLabelSelected: {
-    color: palette.primary,
-  },
-  error: {
-    ...typography.caption,
-    color: palette.danger,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    ...typography.h2,
-    marginBottom: 16,
-    zIndex: 1,
-  },
-  listContent: {
-    paddingBottom: 0,
-  },
-  loadingIndicator: {
-    marginTop: 20,
-  },
-});
+const createStyles = (palette: Palette, typography: Typography, layout: Layout) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+      paddingHorizontal: 20,
+      paddingTop: 32,
+      position: 'relative',
+    },
+    keyboardContainer: {
+      flex: 1,
+      zIndex: 1,
+    },
+    listHeader: {
+      zIndex: 1,
+    },
+    headerCard: {
+      backgroundColor: palette.surface,
+      borderRadius: layout.borderRadius.xl,
+      padding: 20,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.medium,
+      zIndex: 1,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    greetingLabel: {
+      ...typography.body,
+      color: palette.textSecondary,
+    },
+    greetingValue: {
+      ...typography.h1,
+      color: palette.text,
+    },
+    signOutButton: {
+      padding: 10,
+      backgroundColor: palette.card,
+      borderRadius: layout.borderRadius.full,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    headerMeta: {
+      flexDirection: 'row',
+      gap: 10,
+      flexWrap: 'wrap',
+    },
+    metaPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: layout.borderRadius.full,
+      backgroundColor: palette.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    metaText: {
+      ...typography.caption,
+      color: palette.textSecondary,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      marginBottom: 24,
+      gap: 12,
+      zIndex: 1,
+    },
+    formCard: {
+      backgroundColor: palette.surface,
+      borderRadius: layout.borderRadius.xl,
+      padding: 24,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.medium,
+      zIndex: 1,
+    },
+    formTitle: {
+      ...typography.h3,
+      marginBottom: 20,
+    },
+    sectionLabel: {
+      ...typography.label,
+      color: palette.textSecondary,
+      marginTop: 16,
+      marginBottom: 12,
+    },
+    shopOptionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    shopOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: layout.borderRadius.full,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.card,
+      gap: 8,
+    },
+    shopOptionSelected: {
+      borderColor: palette.primary,
+      backgroundColor: palette.primaryGlow,
+    },
+    shopOptionSwatch: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+    },
+    customSwatch: {
+      borderWidth: 1,
+      borderColor: palette.textSecondary,
+      backgroundColor: 'transparent',
+    },
+    shopOptionLabel: {
+      ...typography.caption,
+      fontWeight: '600',
+      color: palette.textSecondary,
+    },
+    shopOptionLabelSelected: {
+      color: palette.primary,
+    },
+    error: {
+      ...typography.caption,
+      color: palette.danger,
+      marginTop: 16,
+      textAlign: 'center',
+    },
+    sectionTitle: {
+      ...typography.h2,
+      marginBottom: 16,
+      zIndex: 1,
+    },
+    listContent: {
+      paddingBottom: 0,
+    },
+    loadingIndicator: {
+      marginTop: 20,
+    },
+  });
 
 export default HomeScreen;

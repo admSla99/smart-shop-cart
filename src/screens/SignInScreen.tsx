@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,15 +10,21 @@ import { DecorativeBackground } from '../components/DecorativeBackground';
 import { FadeInView } from '../components/FadeInView';
 import { TextField } from '../components/TextField';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
-import { palette } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { layout } from '../theme/layout';
+import type { Layout } from '../theme/layout';
+import type { Palette } from '../theme/colors';
+import type { Typography } from '../theme/typography';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignIn'>;
 
 const SignInScreen: React.FC<Props> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { palette, typography, layout } = useTheme();
+  const styles = useMemo(
+    () => createStyles(palette, typography, layout),
+    [palette, typography, layout],
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -100,60 +106,61 @@ const SignInScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.background,
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: palette.surface,
-    borderRadius: 28,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.large,
-    zIndex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 24,
-    zIndex: 1,
-  },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    ...typography.h2,
-    marginBottom: 4,
-  },
-  subtitle: {
-    ...typography.body,
-    color: palette.textSecondary,
-  },
-  form: {
-    gap: 8,
-    zIndex: 1,
-  },
-  error: {
-    ...typography.caption,
-    color: palette.danger,
-    marginTop: 8,
-  },
-  submitButton: {
-    marginTop: 16,
-  },
-});
+const createStyles = (palette: Palette, typography: Typography, layout: Layout) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+      padding: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'relative',
+    },
+    card: {
+      width: '100%',
+      maxWidth: 420,
+      backgroundColor: palette.surface,
+      borderRadius: 28,
+      padding: 24,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.large,
+      zIndex: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 24,
+      zIndex: 1,
+    },
+    headerIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    title: {
+      ...typography.h2,
+      marginBottom: 4,
+    },
+    subtitle: {
+      ...typography.body,
+      color: palette.textSecondary,
+    },
+    form: {
+      gap: 8,
+      zIndex: 1,
+    },
+    error: {
+      ...typography.caption,
+      color: palette.danger,
+      marginTop: 8,
+    },
+    submitButton: {
+      marginTop: 16,
+    },
+  });
 
 export default SignInScreen;

@@ -1,8 +1,14 @@
 import React from 'react';
 import { FlatList } from 'react-native';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent } from '@testing-library/react-native';
 
+import { renderWithTheme } from '../../test-utils/renderWithTheme';
 import HomeScreen from '../HomeScreen';
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue(null),
+  setItem: jest.fn().mockResolvedValue(null),
+}));
 
 let mockLists: Array<{
   id: string;
@@ -71,7 +77,7 @@ describe('HomeScreen', () => {
   });
 
   it('renders the list header as a React element to preserve input focus', () => {
-    const { UNSAFE_getByType } = render(
+    const { UNSAFE_getByType } = renderWithTheme(
       <HomeScreen
         navigation={{ navigate: mockNavigate } as never}
         route={{ key: 'Home', name: 'Home' } as never}
@@ -92,7 +98,7 @@ describe('HomeScreen', () => {
       },
     ];
 
-    const { getByText } = render(
+    const { getByText } = renderWithTheme(
       <HomeScreen
         navigation={{ navigate: mockNavigate } as never}
         route={{ key: 'Home', name: 'Home' } as never}
@@ -104,5 +110,16 @@ describe('HomeScreen', () => {
       'ListDetail',
       expect.objectContaining({ title: 'Weekly Groceries - Jan 4' }),
     );
+  });
+
+  it('renders the theme toggle', () => {
+    const { getByLabelText } = renderWithTheme(
+      <HomeScreen
+        navigation={{ navigate: mockNavigate } as never}
+        route={{ key: 'Home', name: 'Home' } as never}
+      />,
+    );
+
+    expect(getByLabelText('Switch to dark mode')).toBeTruthy();
   });
 });

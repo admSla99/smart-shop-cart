@@ -17,11 +17,12 @@ import { DecorativeBackground } from '../components/DecorativeBackground';
 import { EmptyState } from '../components/EmptyState';
 import { FadeInView } from '../components/FadeInView';
 import { useAuth } from '../contexts/AuthContext';
-import { palette } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { layout } from '../theme/layout';
+import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import type { ShopLayoutTemplate } from '../types';
+import type { Layout } from '../theme/layout';
+import type { Palette } from '../theme/colors';
+import type { Typography } from '../theme/typography';
 
 type TemplateGroup = {
   key: string;
@@ -33,6 +34,11 @@ type TemplateGroup = {
 
 const TemplatesScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { palette, typography, layout } = useTheme();
+  const styles = useMemo(
+    () => createStyles(palette, typography, layout),
+    [palette, typography, layout],
+  );
   const { user } = useAuth();
   const [templates, setTemplates] = useState<ShopLayoutTemplate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -364,136 +370,137 @@ const TemplatesScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: palette.background,
-    position: 'relative',
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: 'transparent',
-    zIndex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  card: {
-    backgroundColor: palette.surface,
-    borderRadius: layout.borderRadius.xl,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.medium,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    ...typography.body,
-    color: palette.textSecondary,
-    marginBottom: 20,
-  },
-  inputLabel: {
-    ...typography.label,
-    color: palette.textSecondary,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: palette.border,
-    borderRadius: layout.borderRadius.l,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: palette.text,
-    marginBottom: 16,
-    backgroundColor: palette.surface,
-    ...layout.shadows.small,
-  },
-  textArea: {
-    minHeight: 120,
-  },
-  error: {
-    ...typography.caption,
-    color: palette.danger,
-    marginBottom: 16,
-  },
-  editingHint: {
-    ...typography.caption,
-    color: palette.textSecondary,
-    marginBottom: 8,
-    fontStyle: 'italic',
-  },
-  listHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  templateCard: {
-    borderWidth: 1,
-    borderColor: palette.border,
-    borderRadius: layout.borderRadius.l,
-    padding: 16,
-    marginBottom: 12,
-    backgroundColor: palette.surface,
-    ...layout.shadows.small,
-  },
-  templateHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  templateInfo: {
-    flex: 1,
-    minWidth: 0,
-    marginRight: 12,
-  },
-  templateTitle: {
-    ...typography.h3,
-    fontSize: 16,
-    flexShrink: 1,
-  },
-  templateSubtitle: {
-    ...typography.body,
-    color: palette.textSecondary,
-    fontSize: 14,
-    flexShrink: 1,
-  },
-  templateActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexShrink: 0,
-  },
-  templateActionButton: {
-    width: 36,
-    height: 36,
-    marginVertical: 0,
-  },
-  areaList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  areaChip: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderWidth: 1,
-    borderRadius: layout.borderRadius.m,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  areaChipLabel: {
-    ...typography.caption,
-    fontWeight: '600',
-  },
-});
+const createStyles = (palette: Palette, typography: Typography, layout: Layout) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: palette.background,
+      position: 'relative',
+    },
+    container: {
+      flex: 1,
+      padding: 20,
+      backgroundColor: 'transparent',
+      zIndex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 40,
+    },
+    card: {
+      backgroundColor: palette.surface,
+      borderRadius: layout.borderRadius.xl,
+      padding: 20,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.medium,
+    },
+    sectionTitle: {
+      ...typography.h3,
+      marginBottom: 4,
+    },
+    sectionSubtitle: {
+      ...typography.body,
+      color: palette.textSecondary,
+      marginBottom: 20,
+    },
+    inputLabel: {
+      ...typography.label,
+      color: palette.textSecondary,
+      marginBottom: 8,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: layout.borderRadius.l,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: palette.text,
+      marginBottom: 16,
+      backgroundColor: palette.surface,
+      ...layout.shadows.small,
+    },
+    textArea: {
+      minHeight: 120,
+    },
+    error: {
+      ...typography.caption,
+      color: palette.danger,
+      marginBottom: 16,
+    },
+    editingHint: {
+      ...typography.caption,
+      color: palette.textSecondary,
+      marginBottom: 8,
+      fontStyle: 'italic',
+    },
+    listHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    templateCard: {
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: layout.borderRadius.l,
+      padding: 16,
+      marginBottom: 12,
+      backgroundColor: palette.surface,
+      ...layout.shadows.small,
+    },
+    templateHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    templateInfo: {
+      flex: 1,
+      minWidth: 0,
+      marginRight: 12,
+    },
+    templateTitle: {
+      ...typography.h3,
+      fontSize: 16,
+      flexShrink: 1,
+    },
+    templateSubtitle: {
+      ...typography.body,
+      color: palette.textSecondary,
+      fontSize: 14,
+      flexShrink: 1,
+    },
+    templateActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flexShrink: 0,
+    },
+    templateActionButton: {
+      width: 36,
+      height: 36,
+      marginVertical: 0,
+    },
+    areaList: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    areaChip: {
+      backgroundColor: palette.card,
+      borderColor: palette.border,
+      borderWidth: 1,
+      borderRadius: layout.borderRadius.m,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    areaChipLabel: {
+      ...typography.caption,
+      fontWeight: '600',
+    },
+  });
 
 export default TemplatesScreen;

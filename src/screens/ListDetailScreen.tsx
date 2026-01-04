@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -25,19 +25,25 @@ import { FadeInView } from '../components/FadeInView';
 import { ItemRow } from '../components/ItemRow';
 import { TextField } from '../components/TextField';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import type { AppStackParamList } from '../navigation/AppNavigator';
 import { useShoppingStore } from '../store/useShoppingLists';
 import { useShopLayouts } from '../store/useShopLayouts';
 import { sortByLayout } from '../lib/layoutSorting';
 import type { ShopLayoutArea } from '../types';
-import { palette } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { layout } from '../theme/layout';
+import type { Layout } from '../theme/layout';
+import type { Palette } from '../theme/colors';
+import type { Typography } from '../theme/typography';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ListDetail'>;
 
 const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const insets = useSafeAreaInsets();
+  const { palette, typography, layout } = useTheme();
+  const styles = useMemo(
+    () => createStyles(palette, typography, layout),
+    [palette, typography, layout],
+  );
   const { listId, title, shopName, shopColor } = route.params;
   const { user } = useAuth();
   const {
@@ -158,13 +164,12 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       );
       setLayoutAreas(updated);
 
-      // Apply new sort order to existing items
       const sorted = items[listId]?.map(item => {
         const area = updated.find(a => a.area_name.toLowerCase() === (item.area_name || '').toLowerCase());
         return {
           id: item.id,
           area_name: area?.area_name ?? null,
-          order_index: area?.sequence ?? null
+          order_index: area?.sequence ?? null,
         };
       }) ?? [];
 
@@ -203,7 +208,6 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const listItems = items[listId] || [];
   const sortedItems = [...listItems].sort((a, b) => {
     if (a.is_checked === b.is_checked) {
-      // Sort by area sequence first if available
       const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
       const bOrder = b.order_index ?? Number.MAX_SAFE_INTEGER;
       if (aOrder !== bOrder) {
@@ -448,222 +452,223 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.background,
-    paddingTop: 32,
-    position: 'relative',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: palette.surface,
-    borderRadius: layout.borderRadius.xl,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.small,
-    zIndex: 1,
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-    marginRight: 12,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginLeft: 8,
-  },
-  headerAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: layout.borderRadius.full,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  headerActionActive: {
-    backgroundColor: 'rgba(255, 200, 87, 0.2)',
-    borderColor: 'rgba(255, 200, 87, 0.6)',
-  },
-  headerActionText: {
-    ...typography.caption,
-    color: palette.textSecondary,
-    fontWeight: '700',
-  },
-  headerActionTextActive: {
-    color: palette.primary,
-  },
-  title: {
-    ...typography.h2,
-    marginBottom: 4,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: layout.borderRadius.full,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  badgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
-  },
-  badgeText: {
-    ...typography.caption,
-    fontWeight: '700',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    zIndex: 1,
-  },
-  listContent: {
-    paddingBottom: 0,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    zIndex: 10,
-    elevation: 10,
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    borderRadius: layout.borderRadius.xl,
-    gap: 12,
-    ...layout.shadows.medium,
-  },
-  addButton: {
-    marginBottom: 0,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-  },
-  configContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-    zIndex: 1,
-  },
-  configCard: {
-    backgroundColor: palette.surface,
-    borderRadius: layout.borderRadius.xl,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.medium,
-  },
-  configTitle: {
-    ...typography.h3,
-    marginBottom: 8,
-  },
-  configSubtitle: {
-    ...typography.body,
-    color: palette.textSecondary,
-    marginBottom: 24,
-  },
-  layoutStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  layoutStatusText: {
-    ...typography.caption,
-    color: palette.textSecondary,
-  },
-  areaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: palette.surface,
-    borderRadius: layout.borderRadius.l,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.small,
-  },
-  areaName: {
-    ...typography.body,
-    fontWeight: '600',
-  },
-  areaActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    padding: 8,
-    borderRadius: layout.borderRadius.m,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  actionButtonDisabled: {
-    opacity: 0.3,
-  },
-  deleteButton: {
-    backgroundColor: 'rgba(229, 72, 77, 0.12)',
-    borderColor: 'rgba(229, 72, 77, 0.3)',
-  },
-  addAreaRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  addAreaInput: {
-    flex: 1,
-    height: 48,
-    backgroundColor: palette.surface,
-    borderRadius: layout.borderRadius.l,
-    paddingHorizontal: 16,
-    color: palette.text,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.small,
-  },
-  addAreaButton: {
-    width: 48,
-    height: 48,
-    borderRadius: layout.borderRadius.l,
-    backgroundColor: palette.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  error: {
-    ...typography.caption,
-    color: palette.danger,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-});
+const createStyles = (palette: Palette, typography: Typography, layout: Layout) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+      paddingTop: 32,
+      position: 'relative',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 20,
+      marginBottom: 20,
+      padding: 16,
+      backgroundColor: palette.surface,
+      borderRadius: layout.borderRadius.xl,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.small,
+      zIndex: 1,
+    },
+    keyboardContainer: {
+      flex: 1,
+    },
+    backButton: {
+      padding: 8,
+      marginLeft: -8,
+      marginRight: 12,
+    },
+    headerContent: {
+      flex: 1,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      gap: 8,
+      marginLeft: 8,
+    },
+    headerAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: layout.borderRadius.full,
+      backgroundColor: palette.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    headerActionActive: {
+      backgroundColor: palette.accentGlow,
+      borderColor: palette.accent,
+    },
+    headerActionText: {
+      ...typography.caption,
+      color: palette.textSecondary,
+      fontWeight: '700',
+    },
+    headerActionTextActive: {
+      color: palette.primary,
+    },
+    title: {
+      ...typography.h2,
+      marginBottom: 4,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: layout.borderRadius.full,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    badgeDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginRight: 6,
+    },
+    badgeText: {
+      ...typography.caption,
+      fontWeight: '700',
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 20,
+      zIndex: 1,
+    },
+    listContent: {
+      paddingBottom: 0,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      zIndex: 10,
+      elevation: 10,
+      padding: 16,
+      paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+      backgroundColor: palette.surface,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: layout.borderRadius.xl,
+      gap: 12,
+      ...layout.shadows.medium,
+    },
+    addButton: {
+      marginBottom: 0,
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      paddingHorizontal: 0,
+      paddingVertical: 0,
+    },
+    configContainer: {
+      flex: 1,
+      paddingHorizontal: 20,
+      zIndex: 1,
+    },
+    configCard: {
+      backgroundColor: palette.surface,
+      borderRadius: layout.borderRadius.xl,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.medium,
+    },
+    configTitle: {
+      ...typography.h3,
+      marginBottom: 8,
+    },
+    configSubtitle: {
+      ...typography.body,
+      color: palette.textSecondary,
+      marginBottom: 24,
+    },
+    layoutStatus: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 16,
+    },
+    layoutStatusText: {
+      ...typography.caption,
+      color: palette.textSecondary,
+    },
+    areaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: palette.surface,
+      borderRadius: layout.borderRadius.l,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.small,
+    },
+    areaName: {
+      ...typography.body,
+      fontWeight: '600',
+    },
+    areaActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    actionButton: {
+      padding: 8,
+      borderRadius: layout.borderRadius.m,
+      backgroundColor: palette.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    actionButtonDisabled: {
+      opacity: 0.3,
+    },
+    deleteButton: {
+      backgroundColor: 'rgba(229, 72, 77, 0.12)',
+      borderColor: 'rgba(229, 72, 77, 0.3)',
+    },
+    addAreaRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 8,
+      marginBottom: 24,
+    },
+    addAreaInput: {
+      flex: 1,
+      height: 48,
+      backgroundColor: palette.surface,
+      borderRadius: layout.borderRadius.l,
+      paddingHorizontal: 16,
+      color: palette.text,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.small,
+    },
+    addAreaButton: {
+      width: 48,
+      height: 48,
+      borderRadius: layout.borderRadius.l,
+      backgroundColor: palette.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    error: {
+      ...typography.caption,
+      color: palette.danger,
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+  });
 
 export default ListDetailScreen;
