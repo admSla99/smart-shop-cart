@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { palette } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { layout } from '../theme/layout';
+import { useTheme } from '../contexts/ThemeContext';
+import type { Palette } from '../theme/colors';
+import type { Typography } from '../theme/typography';
+import type { Layout } from '../theme/layout';
 
 type ListCardProps = {
   title: string;
@@ -23,6 +24,11 @@ export const ListCard: React.FC<ListCardProps> = ({
   onPress,
   onDelete,
 }) => {
+  const { palette, typography, layout } = useTheme();
+  const styles = useMemo(
+    () => createStyles(palette, typography, layout),
+    [palette, typography, layout],
+  );
   const scale = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -106,89 +112,92 @@ export const ListCard: React.FC<ListCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: palette.surface,
-    borderRadius: layout.borderRadius.l,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: palette.border,
-    overflow: 'hidden',
-    ...layout.shadows.medium,
-  },
-  topAccent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 6,
-    borderTopLeftRadius: layout.borderRadius.l,
-    borderTopRightRadius: layout.borderRadius.l,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  titleRow: {
-    flex: 1,
-    marginRight: 12,
-  },
-  title: {
-    ...typography.h3,
-    marginBottom: 8,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: layout.borderRadius.full,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  badgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
-  },
-  badgeText: {
-    ...typography.caption,
-    fontWeight: '700',
-  },
-  deleteButton: {
-    padding: 8,
-    margin: -8,
-  },
-  deletePressed: {
-    opacity: 0.6,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: palette.border,
-  },
-  countBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: layout.borderRadius.full,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  countText: {
-    ...typography.bodySmall,
-    color: palette.textSecondary,
-    fontWeight: '600',
-  },
-});
+const createStyles = (palette: Palette, typography: Typography, layout: Layout) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: palette.surface,
+      borderRadius: layout.borderRadius.l,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: palette.border,
+      overflow: 'hidden',
+      ...layout.shadows.medium,
+    },
+    topAccent: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 6,
+      borderTopLeftRadius: layout.borderRadius.l,
+      borderTopRightRadius: layout.borderRadius.l,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 16,
+    },
+    titleRow: {
+      flex: 1,
+      marginRight: 12,
+    },
+    title: {
+      ...typography.h3,
+      marginBottom: 8,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: layout.borderRadius.full,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    badgeDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginRight: 6,
+    },
+    badgeText: {
+      ...typography.caption,
+      fontWeight: '700',
+    },
+    deleteButton: {
+      padding: 8,
+      margin: -8,
+    },
+    deletePressed: {
+      opacity: 0.6,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: palette.border,
+    },
+    countBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: layout.borderRadius.full,
+      backgroundColor: palette.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    countText: {
+      ...typography.bodySmall,
+      color: palette.textSecondary,
+      fontWeight: '600',
+    },
+  });
+
+export default ListCard;

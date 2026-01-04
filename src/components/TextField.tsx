@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,9 +8,10 @@ import {
   ViewStyle,
 } from 'react-native';
 
-import { palette } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { layout } from '../theme/layout';
+import { useTheme } from '../contexts/ThemeContext';
+import type { Palette } from '../theme/colors';
+import type { Layout } from '../theme/layout';
+import type { Typography } from '../theme/typography';
 
 type TextFieldProps = TextInputProps & {
   label?: string;
@@ -25,6 +26,11 @@ export const TextField: React.FC<TextFieldProps> = ({
   style,
   ...props
 }) => {
+  const { palette, typography, layout } = useTheme();
+  const styles = useMemo(
+    () => createStyles(palette, typography, layout),
+    [palette, typography, layout],
+  );
   const [isFocused, setIsFocused] = useState(false);
   const { onFocus, onBlur, ...inputProps } = props;
 
@@ -61,46 +67,47 @@ export const TextField: React.FC<TextFieldProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    ...typography.label,
-    color: palette.textSecondary,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  inputContainer: {
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    borderRadius: layout.borderRadius.m,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    ...layout.shadows.small,
-  },
-  focused: {
-    borderColor: palette.primary,
-    backgroundColor: palette.card,
-    shadowColor: palette.primary,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-  },
-  errorBorder: {
-    borderColor: palette.danger,
-  },
-  input: {
-    ...typography.body,
-    color: palette.text,
-    padding: 0, // Reset default padding
-  },
-  errorText: {
-    ...typography.caption,
-    color: palette.danger,
-    marginTop: 4,
-    marginLeft: 4,
-  },
-});
+const createStyles = (palette: Palette, typography: Typography, layout: Layout) =>
+  StyleSheet.create({
+    container: {
+      marginBottom: 16,
+    },
+    label: {
+      ...typography.label,
+      color: palette.textSecondary,
+      marginBottom: 8,
+      marginLeft: 4,
+    },
+    inputContainer: {
+      backgroundColor: palette.surface,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: layout.borderRadius.m,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      ...layout.shadows.small,
+    },
+    focused: {
+      borderColor: palette.primary,
+      backgroundColor: palette.card,
+      shadowColor: palette.primary,
+      shadowOpacity: 0.18,
+      shadowRadius: 10,
+    },
+    errorBorder: {
+      borderColor: palette.danger,
+    },
+    input: {
+      ...typography.body,
+      color: palette.text,
+      padding: 0, // Reset default padding
+    },
+    errorText: {
+      ...typography.caption,
+      color: palette.danger,
+      marginTop: 4,
+      marginLeft: 4,
+    },
+  });
 
 export default TextField;

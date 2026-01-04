@@ -1,16 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { palette } from '../theme/colors';
+import { useTheme } from '../contexts/ThemeContext';
+import type { Palette } from '../theme/colors';
+import type { ThemeMode } from '../contexts/ThemeContext';
 
 type Variant = 'warm' | 'cool' | 'sunny';
-
-const variantGradients: Record<Variant, string[]> = {
-  warm: palette.gradientPrimary,
-  cool: palette.gradientSecondary,
-  sunny: palette.gradientAccent ?? palette.gradientPrimary,
-};
 
 type DecorativeBackgroundProps = {
   variant?: Variant;
@@ -19,6 +15,11 @@ type DecorativeBackgroundProps = {
 export const DecorativeBackground: React.FC<DecorativeBackgroundProps> = ({
   variant = 'warm',
 }) => {
+  const { palette, themeMode } = useTheme();
+  const { styles, variantGradients } = useMemo(
+    () => createStyles(palette, themeMode),
+    [palette, themeMode],
+  );
   const gradient = variantGradients[variant] ?? palette.gradientPrimary;
 
   return (
@@ -47,52 +48,63 @@ export const DecorativeBackground: React.FC<DecorativeBackgroundProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-    zIndex: 0,
-  },
-  blobPrimary: {
-    position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    top: -140,
-    right: -80,
-    opacity: 0.35,
-    transform: [{ rotate: '18deg' }],
-  },
-  blobSecondary: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    bottom: -120,
-    left: -70,
-    opacity: 0.28,
-    transform: [{ rotate: '-12deg' }],
-  },
-  orbAccent: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: palette.accent,
-    opacity: 0.12,
-    top: 120,
-    left: -40,
-  },
-  orbWarm: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: palette.primary,
-    opacity: 0.08,
-    bottom: 140,
-    right: -70,
-  },
-});
+const createStyles = (palette: Palette, themeMode: ThemeMode) => {
+  const isDark = themeMode === 'dark';
+
+  return {
+    variantGradients: {
+      warm: palette.gradientPrimary,
+      cool: palette.gradientSecondary,
+      sunny: palette.gradientAccent ?? palette.gradientPrimary,
+    } as Record<Variant, string[]>,
+    styles: StyleSheet.create({
+      container: {
+        ...StyleSheet.absoluteFillObject,
+        overflow: 'hidden',
+        zIndex: 0,
+      },
+      blobPrimary: {
+        position: 'absolute',
+        width: 320,
+        height: 320,
+        borderRadius: 160,
+        top: -140,
+        right: -80,
+        opacity: isDark ? 0.22 : 0.35,
+        transform: [{ rotate: '18deg' }],
+      },
+      blobSecondary: {
+        position: 'absolute',
+        width: 260,
+        height: 260,
+        borderRadius: 130,
+        bottom: -120,
+        left: -70,
+        opacity: isDark ? 0.18 : 0.28,
+        transform: [{ rotate: '-12deg' }],
+      },
+      orbAccent: {
+        position: 'absolute',
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        backgroundColor: palette.accent,
+        opacity: isDark ? 0.08 : 0.12,
+        top: 120,
+        left: -40,
+      },
+      orbWarm: {
+        position: 'absolute',
+        width: 200,
+        height: 200,
+        borderRadius: 100,
+        backgroundColor: palette.primary,
+        opacity: isDark ? 0.06 : 0.08,
+        bottom: 140,
+        right: -70,
+      },
+    }),
+  };
+};
 
 export default DecorativeBackground;

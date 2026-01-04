@@ -19,10 +19,14 @@ const THEME_STORAGE_KEY = 'theme-preference';
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
+export const ThemeProvider: React.FC<React.PropsWithChildren<{ initialMode?: ThemeMode }>> = ({
+  children,
+  initialMode,
+}) => {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(initialMode ?? 'light');
 
   useEffect(() => {
+    if (initialMode) return;
     let isMounted = true;
     AsyncStorage.getItem(THEME_STORAGE_KEY)
       .then((stored) => {
@@ -36,7 +40,7 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialMode]);
 
   const toggleTheme = () => {
     const next = themeMode === 'light' ? 'dark' : 'light';
