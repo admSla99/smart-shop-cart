@@ -309,25 +309,41 @@ const TemplatesScreen: React.FC = () => {
           {groupedTemplates.map((group) => (
             <View key={group.key} style={styles.templateCard}>
               <View style={styles.templateHeader}>
-                <View>
-                  <Text style={styles.templateTitle}>{group.template_name}</Text>
-                  <Text style={styles.templateSubtitle}>{group.shop_name}</Text>
+                <View style={styles.templateInfo} testID={`template-info-${group.key}`}>
+                  <Text
+                    style={styles.templateTitle}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {group.template_name}
+                  </Text>
+                  <Text
+                    style={styles.templateSubtitle}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {group.shop_name}
+                  </Text>
                 </View>
-                <View style={styles.templateActions}>
+                <View style={styles.templateActions} testID={`template-actions-${group.key}`}>
                   <Button
-                    label="Edit"
                     variant="secondary"
                     icon="edit-3"
                     compact
+                    iconOnly
+                    accessibilityLabel={`Edit ${group.template_name}`}
                     onPress={() => startEditing(group)}
+                    style={styles.templateActionButton}
                   />
                   <Button
-                    label="Delete"
                     variant="ghost"
                     icon="trash-2"
                     compact
+                    iconOnly
+                    accessibilityLabel={`Delete ${group.template_name}`}
                     onPress={() => confirmDelete(group)}
                     disabled={saving}
+                    style={styles.templateActionButton}
                   />
                 </View>
               </View>
@@ -433,19 +449,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  templateInfo: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 12,
+  },
   templateTitle: {
     ...typography.h3,
     fontSize: 16,
+    flexShrink: 1,
   },
   templateSubtitle: {
     ...typography.body,
     color: palette.textSecondary,
     fontSize: 14,
+    flexShrink: 1,
   },
   templateActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
+  },
+  templateActionButton: {
+    width: 36,
+    height: 36,
+    marginVertical: 0,
   },
   areaList: {
     flexDirection: 'row',

@@ -291,7 +291,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             styles.listContent,
             { paddingBottom: insets.bottom + 32 },
           ]}
-          ListHeaderComponent={renderListHeader}
+          ListHeaderComponent={renderListHeader()}
           ListEmptyComponent={renderEmpty}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
