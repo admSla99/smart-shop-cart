@@ -1,7 +1,32 @@
 import { ViewStyle } from 'react-native';
-import { palette } from './colors';
+import type { Palette } from './colors';
+import { lightPalette } from './colors';
 
-export const layout = {
+export type Layout = {
+  spacing: {
+    xs: number;
+    s: number;
+    m: number;
+    l: number;
+    xl: number;
+    xxl: number;
+  };
+  borderRadius: {
+    s: number;
+    m: number;
+    l: number;
+    xl: number;
+    full: number;
+  };
+  shadows: {
+    small: ViewStyle;
+    medium: ViewStyle;
+    large: ViewStyle;
+    glow: (color: string) => ViewStyle;
+  };
+};
+
+export const createLayout = (palette: Palette): Layout => ({
   spacing: {
     xs: 4,
     s: 8,
@@ -19,21 +44,21 @@ export const layout = {
   },
   shadows: {
     small: {
-      shadowColor: '#0F0A06',
+      shadowColor: palette.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.08,
       shadowRadius: 6,
       elevation: 2,
     } as ViewStyle,
     medium: {
-      shadowColor: '#0F0A06',
+      shadowColor: palette.shadow,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.12,
       shadowRadius: 12,
       elevation: 4,
     } as ViewStyle,
     large: {
-      shadowColor: '#0F0A06',
+      shadowColor: palette.shadow,
       shadowOffset: { width: 0, height: 14 },
       shadowOpacity: 0.16,
       shadowRadius: 24,
@@ -47,4 +72,6 @@ export const layout = {
       elevation: 6,
     } as ViewStyle),
   },
-};
+});
+
+export const layout = createLayout(lightPalette);
