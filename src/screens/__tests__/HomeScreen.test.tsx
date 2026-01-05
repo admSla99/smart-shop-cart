@@ -112,14 +112,14 @@ describe('HomeScreen', () => {
     );
   });
 
-  it('renders the theme toggle', () => {
-    const { getByLabelText } = renderWithTheme(
+  it('does not render the theme toggle inside the Home screen tree', () => {
+    const { queryByLabelText } = renderWithTheme(
       <HomeScreen
         navigation={{ navigate: mockNavigate } as never}
         route={{ key: 'Home', name: 'Home' } as never}
       />,
     );
 
-    expect(getByLabelText('Switch to dark mode')).toBeTruthy();
+    expect(queryByLabelText('Switch to dark mode')).toBeNull();
   });
 });

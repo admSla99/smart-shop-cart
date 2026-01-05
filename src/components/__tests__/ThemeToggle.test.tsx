@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { ThemeProvider } from '../../contexts/ThemeContext';
@@ -33,5 +33,22 @@ describe('ThemeToggle', () => {
     expect(getByText('moon')).toBeTruthy();
     fireEvent.press(getByLabelText('Switch to dark mode'));
     expect(getByText('sun')).toBeTruthy();
+  });
+
+  it('renders header variant without absolute positioning', () => {
+    const { getByLabelText } = render(
+      <ThemeProvider>
+        <ThemeToggle variant="header" />
+      </ThemeProvider>,
+    );
+
+    const button = getByLabelText('Switch to dark mode');
+    const resolvedStyle =
+      typeof button.props.style === 'function'
+        ? button.props.style({ pressed: false })
+        : button.props.style;
+    const flattened = StyleSheet.flatten(resolvedStyle);
+
+    expect(flattened?.position).not.toBe('absolute');
   });
 });
