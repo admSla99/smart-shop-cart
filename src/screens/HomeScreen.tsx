@@ -24,7 +24,6 @@ import { EmptyState } from '../components/EmptyState';
 import { ColorPicker } from '../components/ColorPicker';
 import { ListCard } from '../components/ListCard';
 import { TextField } from '../components/TextField';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import type { AppStackParamList } from '../navigation/AppNavigator';
@@ -282,7 +281,6 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <DecorativeBackground variant="warm" />
-      <ThemeToggle rightOffset={20} />
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

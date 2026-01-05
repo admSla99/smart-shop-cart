@@ -7,7 +7,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../components/Button';
 import { DecorativeBackground } from '../components/DecorativeBackground';
 import { FadeInView } from '../components/FadeInView';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
 import type { Layout } from '../theme/layout';
@@ -26,7 +25,6 @@ const AuthLandingScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <DecorativeBackground variant="warm" />
-      <ThemeToggle rightOffset={24} />
       <FadeInView style={styles.content}>
         <LinearGradient
           colors={palette.gradientPrimary}

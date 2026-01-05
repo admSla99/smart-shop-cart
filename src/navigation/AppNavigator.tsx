@@ -4,6 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo } from 'react';
 
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import AuthLandingScreen from '../screens/AuthLandingScreen';
@@ -57,7 +58,11 @@ const AppFlow = () => {
       <MainStack.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: 'My Lists', headerLargeTitle: true }}
+        options={{
+          title: 'My Lists',
+          headerLargeTitle: true,
+          headerRight: () => <ThemeToggle variant="header" />,
+        }}
       />
       <MainStack.Screen
         name="ListDetail"

@@ -11,17 +11,23 @@ type ThemeToggleProps = {
   rightOffset?: number;
   topOffset?: number;
   style?: ViewStyle;
+  variant?: 'floating' | 'header';
 };
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   rightOffset = 20,
   topOffset = 12,
   style,
+  variant = 'floating',
 }) => {
   const insets = useSafeAreaInsets();
   const { themeMode, toggleTheme, palette, layout } = useTheme();
   const styles = useMemo(() => createStyles(palette, layout), [palette, layout]);
   const isDark = themeMode === 'dark';
+  const placementStyle =
+    variant === 'header'
+      ? styles.header
+      : [styles.floating, { top: insets.top + topOffset, right: rightOffset }];
 
   return (
     <Pressable
@@ -29,8 +35,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       accessibilityRole="button"
       onPress={toggleTheme}
       style={({ pressed }) => [
-        styles.button,
-        { top: insets.top + topOffset, right: rightOffset },
+        styles.base,
+        placementStyle,
         pressed && styles.pressed,
         style,
       ]}
@@ -43,18 +49,25 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
 
 const createStyles = (palette: Palette, layout: Layout) =>
   StyleSheet.create({
-    button: {
-      position: 'absolute',
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+    base: {
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: palette.surface,
       borderWidth: 1,
       borderColor: palette.border,
-      zIndex: 10,
       ...layout.shadows.small,
+    },
+    floating: {
+      position: 'absolute',
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      zIndex: 10,
+    },
+    header: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
     },
     pressed: {
       opacity: 0.7,
