@@ -1,8 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { renderWithTheme } from '../../test-utils/renderWithTheme';
 
 import TemplatesScreen from '../TemplatesScreen';
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue(null),
+  setItem: jest.fn().mockResolvedValue(null),
+}));
 
 const mockTemplates = [
   {
@@ -69,7 +74,7 @@ jest.mock('../../lib/supabase', () => {
 
 describe('TemplatesScreen', () => {
   it('truncates long titles and keeps actions pinned to the right', async () => {
-    const { findByText, getByTestId, queryByText } = render(<TemplatesScreen />);
+    const { findByText, getByTestId, queryByText } = renderWithTheme(<TemplatesScreen />);
     const title = await findByText(mockTemplates[0].template_name);
     const key = `${mockTemplates[0].shop_name}::${mockTemplates[0].template_name}`;
 

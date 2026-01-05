@@ -1,5 +1,6 @@
 import { TextStyle } from 'react-native';
-import { palette } from './colors';
+import type { Palette } from './colors';
+import { lightPalette } from './colors';
 
 const fonts = {
   display: 'Sora-Bold',
@@ -9,7 +10,19 @@ const fonts = {
   bodyBold: 'DMSans-Bold',
 };
 
-export const typography = {
+export type Typography = {
+  display: TextStyle;
+  h1: TextStyle;
+  h2: TextStyle;
+  h3: TextStyle;
+  body: TextStyle;
+  bodyMedium: TextStyle;
+  bodySmall: TextStyle;
+  label: TextStyle;
+  caption: TextStyle;
+};
+
+export const createTypography = (palette: Palette): Typography => ({
   display: {
     fontSize: 36,
     fontFamily: fonts.display,
@@ -68,4 +81,6 @@ export const typography = {
     color: palette.textTertiary,
     lineHeight: 16,
   } as TextStyle,
-};
+});
+
+export const typography = createTypography(lightPalette);

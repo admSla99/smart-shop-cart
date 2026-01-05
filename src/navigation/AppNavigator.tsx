@@ -1,17 +1,18 @@
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import AuthLandingScreen from '../screens/AuthLandingScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ListDetailScreen from '../screens/ListDetailScreen';
 import SignInScreen from '../screens/SignInScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import TemplatesScreen from '../screens/TemplatesScreen';
-import { palette } from '../theme/colors';
 
 export type AuthStackParamList = {
   AuthLanding: undefined;
@@ -33,18 +34,6 @@ export type AppScreenProps<T extends keyof AppStackParamList> = NativeStackScree
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainStack = createNativeStackNavigator<AppStackParamList>();
 
-const navTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: palette.background,
-    card: palette.surface,
-    border: palette.border,
-    text: palette.text,
-    primary: palette.primary,
-  },
-};
-
 const AuthFlow = () => (
   <AuthStack.Navigator screenOptions={{ headerShown: false }}>
     <AuthStack.Screen name="AuthLanding" component={AuthLandingScreen} />
@@ -53,36 +42,60 @@ const AuthFlow = () => (
   </AuthStack.Navigator>
 );
 
-const AppFlow = () => (
-  <MainStack.Navigator
-    screenOptions={{
-      headerStyle: { backgroundColor: palette.background },
-      headerShadowVisible: false,
-      headerTintColor: palette.text,
-      headerTitleStyle: { fontWeight: '700' },
-      contentStyle: { backgroundColor: palette.background },
-    }}
-  >
-    <MainStack.Screen
-      name="Home"
-      component={HomeScreen}
-      options={{ title: 'My Lists', headerLargeTitle: true }}
-    />
-    <MainStack.Screen
-      name="ListDetail"
-      component={ListDetailScreen}
-      options={({ route }) => ({ title: route.params.title })}
-    />
-    <MainStack.Screen
-      name="Templates"
-      component={TemplatesScreen}
-      options={{ title: 'Templates' }}
-    />
-  </MainStack.Navigator>
-);
+const AppFlow = () => {
+  const { palette } = useTheme();
+
+  return (
+    <MainStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: palette.background },
+        headerShadowVisible: false,
+        headerTintColor: palette.text,
+        headerTitleStyle: { fontWeight: '700' },
+        contentStyle: { backgroundColor: palette.background },
+      }}
+    >
+      <MainStack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          title: 'My Lists',
+          headerLargeTitle: true,
+          headerRight: () => <ThemeToggle variant="header" />,
+        }}
+      />
+      <MainStack.Screen
+        name="ListDetail"
+        component={ListDetailScreen}
+        options={({ route }) => ({ title: route.params.title })}
+      />
+      <MainStack.Screen
+        name="Templates"
+        component={TemplatesScreen}
+        options={{ title: 'Templates' }}
+      />
+    </MainStack.Navigator>
+  );
+};
 
 export const AppNavigator = () => {
   const { loading, user } = useAuth();
+  const { palette } = useTheme();
+
+  const navTheme = useMemo(
+    () => ({
+      ...DefaultTheme,
+      colors: {
+        ...DefaultTheme.colors,
+        background: palette.background,
+        card: palette.surface,
+        border: palette.border,
+        text: palette.text,
+        primary: palette.primary,
+      },
+    }),
+    [palette],
+  );
 
   return (
     <NavigationContainer theme={navTheme}>

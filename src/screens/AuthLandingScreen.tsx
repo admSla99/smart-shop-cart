@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,14 +7,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../components/Button';
 import { DecorativeBackground } from '../components/DecorativeBackground';
 import { FadeInView } from '../components/FadeInView';
+import { useTheme } from '../contexts/ThemeContext';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
-import { palette } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { layout } from '../theme/layout';
+import type { Layout } from '../theme/layout';
+import type { Palette } from '../theme/colors';
+import type { Typography } from '../theme/typography';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'AuthLanding'>;
 
 const AuthLandingScreen: React.FC<Props> = ({ navigation }) => {
+  const { palette, typography, layout } = useTheme();
+  const styles = useMemo(
+    () => createStyles(palette, typography, layout),
+    [palette, typography, layout],
+  );
+
   return (
     <View style={styles.container}>
       <DecorativeBackground variant="warm" />
@@ -64,72 +71,73 @@ const AuthLandingScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: palette.background,
-    padding: 24,
-    position: 'relative',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
-    ...layout.shadows.large,
-  },
-  title: {
-    ...typography.display,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  subtitle: {
-    ...typography.body,
-    color: palette.textSecondary,
-    textAlign: 'center',
-    maxWidth: 280,
-    marginBottom: 24,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: layout.borderRadius.full,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    ...layout.shadows.small,
-  },
-  chipText: {
-    ...typography.caption,
-    color: palette.textSecondary,
-  },
-  footer: {
-    gap: 16,
-    marginBottom: 24,
-    zIndex: 1,
-  },
-  button: {
-    width: '100%',
-  },
-});
+const createStyles = (palette: Palette, typography: Typography, layout: Layout) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.background,
+      padding: 24,
+      position: 'relative',
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1,
+    },
+    iconContainer: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 32,
+      borderWidth: 1,
+      borderColor: palette.borderHighlight,
+      ...layout.shadows.large,
+    },
+    title: {
+      ...typography.display,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    subtitle: {
+      ...typography.body,
+      color: palette.textSecondary,
+      textAlign: 'center',
+      maxWidth: 280,
+      marginBottom: 24,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: 10,
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: layout.borderRadius.full,
+      backgroundColor: palette.surface,
+      borderWidth: 1,
+      borderColor: palette.border,
+      ...layout.shadows.small,
+    },
+    chipText: {
+      ...typography.caption,
+      color: palette.textSecondary,
+    },
+    footer: {
+      gap: 16,
+      marginBottom: 24,
+      zIndex: 1,
+    },
+    button: {
+      width: '100%',
+    },
+  });
 
 export default AuthLandingScreen;

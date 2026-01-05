@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -11,9 +11,10 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { palette } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { layout } from '../theme/layout';
+import { useTheme } from '../contexts/ThemeContext';
+import type { Palette } from '../theme/colors';
+import type { Layout } from '../theme/layout';
+import type { Typography } from '../theme/typography';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -44,6 +45,11 @@ export const Button: React.FC<ButtonProps> = ({
   accessibilityLabel,
   style,
 }) => {
+  const { palette, typography, layout } = useTheme();
+  const styles = useMemo(
+    () => createStyles(palette, typography, layout),
+    [palette, typography, layout],
+  );
   const scale = useRef(new Animated.Value(1)).current;
   const isDisabled = disabled || loading;
   const hasLabel = typeof label === 'string' && label.length > 0;
@@ -156,94 +162,95 @@ export const Button: React.FC<ButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: 6,
-  },
-  compactContainer: {
-    marginVertical: 4,
-  },
-  base: {
-    flexDirection: 'row',
-    borderRadius: layout.borderRadius.l,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-    ...layout.shadows.medium,
-  },
-  primary: {
-    shadowColor: palette.primary,
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-  },
-  secondary: {
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  danger: {
-    backgroundColor: palette.danger,
-    shadowColor: palette.danger,
-    shadowOpacity: 0.4,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    shadowOpacity: 0,
-    elevation: 0,
-    paddingHorizontal: 12,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  compact: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: layout.borderRadius.m,
-  },
-  iconOnlyBase: {
-    paddingVertical: 0,
-    paddingHorizontal: 0,
-    minWidth: 0,
-    minHeight: 0,
-    flex: 1,
-  },
-  label: {
-    ...typography.label,
-    fontSize: 16,
-  },
-  compactLabel: {
-    fontSize: 14,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconOnlyContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  reverse: {
-    flexDirection: 'row-reverse',
-  },
-  icon: {
-    marginRight: 8,
-  },
-  iconOnlyIcon: {
-    marginRight: 0,
-  },
-  iconRight: {
-    marginRight: 0,
-    marginLeft: 8,
-  },
-});
+const createStyles = (palette: Palette, typography: Typography, layout: Layout) =>
+  StyleSheet.create({
+    container: {
+      marginVertical: 6,
+    },
+    compactContainer: {
+      marginVertical: 4,
+    },
+    base: {
+      flexDirection: 'row',
+      borderRadius: layout.borderRadius.l,
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+      overflow: 'hidden',
+      ...layout.shadows.medium,
+    },
+    primary: {
+      shadowColor: palette.primary,
+      shadowOpacity: 0.25,
+      shadowRadius: 16,
+      elevation: 8,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.4)',
+    },
+    secondary: {
+      backgroundColor: palette.surface,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    danger: {
+      backgroundColor: palette.danger,
+      shadowColor: palette.danger,
+      shadowOpacity: 0.4,
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+      shadowOpacity: 0,
+      elevation: 0,
+      paddingHorizontal: 12,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    gradient: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    compact: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: layout.borderRadius.m,
+    },
+    iconOnlyBase: {
+      paddingVertical: 0,
+      paddingHorizontal: 0,
+      minWidth: 0,
+      minHeight: 0,
+      flex: 1,
+    },
+    label: {
+      ...typography.label,
+      fontSize: 16,
+    },
+    compactLabel: {
+      fontSize: 14,
+    },
+    content: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    iconOnlyContent: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    reverse: {
+      flexDirection: 'row-reverse',
+    },
+    icon: {
+      marginRight: 8,
+    },
+    iconOnlyIcon: {
+      marginRight: 0,
+    },
+    iconRight: {
+      marginRight: 0,
+      marginLeft: 8,
+    },
+  });
 
 export default Button;

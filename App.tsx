@@ -6,10 +6,23 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AuthProvider } from './src/contexts/AuthContext';
 import { LoadingOverlay } from './src/components/LoadingOverlay';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
-import { palette } from './src/theme/colors';
+
+const AppShell = () => {
+  const { palette, themeMode } = useTheme();
+
+  return (
+    <>
+      <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
+      <View style={{ flex: 1, backgroundColor: palette.background }}>
+        <AppNavigator />
+      </View>
+    </>
+  );
+};
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -21,22 +34,13 @@ export default function App() {
     'DMSans-Bold': require('./assets/fonts/DMSans-Bold.ttf'),
   });
 
-  if (!fontsLoaded) {
-    return (
-      <SafeAreaProvider>
-        <LoadingOverlay message="Loading fonts..." />
-      </SafeAreaProvider>
-    );
-  }
-
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="dark" />
-        <View style={{ flex: 1, backgroundColor: palette.background }}>
-          <AppNavigator />
-        </View>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          {fontsLoaded ? <AppShell /> : <LoadingOverlay message="Loading fonts..." />}
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
