@@ -206,6 +206,7 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   const listItems = items[listId] || [];
+  const isLoadingItems = loadingItems[listId] ?? false;
   const sortedItems = [...listItems].sort((a, b) => {
     if (a.is_checked === b.is_checked) {
       const aOrder = a.order_index ?? Number.MAX_SAFE_INTEGER;
@@ -391,7 +392,7 @@ const ListDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         ) : (
           <>
             <FadeInView style={styles.content}>
-              {loadingItems && listItems.length === 0 ? (
+              {isLoadingItems && listItems.length === 0 ? (
                 <ActivityIndicator color={palette.primary} style={{ marginTop: 40 }} />
               ) : (
                 <FlatList
