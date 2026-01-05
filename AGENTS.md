@@ -4,6 +4,7 @@
 - `src/screens` holds navigation targets for auth, home, list detail, and templates; entry wiring lives in `App.tsx` + `navigation/AppNavigator`.
 - Shared UI sits in `src/components`, auth context in `src/contexts`, and state in `src/store` (Zustand stores for lists/layouts).
 - `src/lib` contains Supabase client + layout-sorting helpers; `theme` defines palette/spacing; `types` stores shared models.
+- `src/contexts/ThemeContext.tsx` manages light/dark mode, and `ThemeToggle` is in the Home navigation header.
 - `docs/` contains deeper documentation (development, architecture, Supabase, testing). Keep these docs in sync with product and workflow changes.
 - Supabase artifacts: `supabase-schema.sql` (tables + RLS) and edge function `supabase/functions/sort-by-layout` (OpenRouter-backed sorter). Static assets live in `assets/`; Expo config in `app.config.ts`.
 
@@ -23,6 +24,7 @@
 ## Testing Guidelines
 - A small Jest suite exists; run `npm test` for component checks and still execute manual smoke tests: auth signup/signin, create/rename/delete lists, add/check/delete items, manage layouts/templates, and verify AI sorting returns ordered items.
 - Before merging, verify web plus at least one native target via Expo and confirm sessions persist across reloads.
+- Include a dark mode smoke check: toggle from the Home header and confirm it persists after reload.
 
 ## Commit & Pull Request Guidelines
 - Follow existing history: short, imperative subjects (`Add templates management screen`).

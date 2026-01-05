@@ -6,6 +6,7 @@ Cross-platform shopping list app built with Expo + React Native and Supabase.
 - Email/password auth with persisted sessions.
 - Lists and items with per-shop layouts and templates.
 - AI assisted layout sorting via a Supabase edge function.
+- Light/dark mode with a Home header toggle and persisted preference.
 
 ## Quick start
 1. `npm install`

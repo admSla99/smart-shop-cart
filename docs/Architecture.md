@@ -39,6 +39,11 @@ Shared models live in `src/types/index.ts` and mirror Supabase tables:
 - `src/components` holds shared UI building blocks.
 - `src/theme` defines palette, typography, and layout constants used across screens.
 
+## Theming
+- `src/contexts/ThemeContext.tsx` provides palette, typography, and layout tokens plus the current theme mode.
+- Theme preference is persisted and restored on launch.
+- `ThemeToggle` lives in the Home navigation header, and `AppNavigator` applies theme colors to navigation chrome.
+
 ## Defaults and presets
 - `DEFAULT_LAYOUTS` in `src/lib/layoutSorting.ts` provides starter layouts when a user has not configured a shop.
 - Home screen presets (Kaufland, Lidl, Coop-jednota) seed shop metadata and colors.
